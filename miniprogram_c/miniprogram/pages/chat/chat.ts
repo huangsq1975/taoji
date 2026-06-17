@@ -108,7 +108,7 @@ Page({
       local: '企业经营流水_2026.pdf',
       wechat: '微信收到_征信报告截图.png',
     }
-    this.addMessage('user', `[${labels[type] ?? type}] ${names[type] ?? '文件'}`)
+    this.addMessage('user', `[${labels[type] !== undefined ? labels[type] : type}] ${names[type] !== undefined ? names[type] : '文件'}`)
     this.replyAI('upload')
   },
 
