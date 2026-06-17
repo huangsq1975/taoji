@@ -1,0 +1,147 @@
+.reports-page { max-width: 1200px; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metrics-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-mini-card {
+  padding: 14px 20px;
+  border-radius: 8px;
+  min-width: 120px;
+}
+
+.metric-mini-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.metric-mini-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 180px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+}
+
+.search-input:focus { border-color: #2563eb; }
+
+.filter-select {
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #374151;
+  background: white;
+  outline: none;
+}
+
+.table-card { padding: 0; overflow: hidden; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.table-row-hover { cursor: pointer; transition: background 0.1s; }
+.table-row-hover:hover td { background: #f8fafc; }
+.table-row-hover:last-child td { border-bottom: none; }
+
+.cell-main { font-weight: 500; color: #0f172a; }
+.cell-sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.product-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+.progress-bar { width: 70px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: #2563eb; border-radius: 3px; }
+.progress-label { font-size: 12px; color: #64748b; white-space: nowrap; }
+
+.btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.btn-ai { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.btn-ai:hover { background: #dbeafe; }
+.btn-review { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.btn-review:hover { background: #fef3c7; }
+.btn-export { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.btn-export:hover { background: #dcfce7; }
+.btn-view { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.btn-view:hover { background: #f1f5f9; }
+
+.empty-state { text-align: center; padding: 48px; color: #94a3b8; font-size: 14px; }

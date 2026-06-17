@@ -1,0 +1,141 @@
+.bank-center { max-width: 1200px; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title { font-size: 20px; font-weight: 700; color: #0f172a; }
+.header-actions { display: flex; gap: 8px; }
+
+.btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.btn-primary { background: #2563eb; color: white; border: none; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-outline { background: white; color: #374151; border: 1px solid #e2e8f0; }
+.btn-outline:hover { background: #f8fafc; }
+
+.metrics-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.metric-mini-card { padding: 14px 20px; border-radius: 8px; min-width: 130px; }
+.metric-mini-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.metric-mini-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+.card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  flex: 1;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.search-input:focus { border-color: #2563eb; }
+
+.filter-select {
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 13px;
+  background: white;
+  outline: none;
+}
+
+.toolbar-spacer { flex: 1; }
+.record-count { font-size: 13px; color: #64748b; }
+
+.table-card { padding: 0; overflow: hidden; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.table-row-hover { cursor: pointer; transition: background 0.1s; }
+.table-row-hover:hover td { background: #f8fafc; }
+.table-row-hover:last-child td { border-bottom: none; }
+
+.bank-name-cell { display: flex; align-items: center; gap: 12px; }
+
+.bank-avatar {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cell-main { font-weight: 500; color: #0f172a; }
+.cell-sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+
+.product-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.product-chip {
+  padding: 2px 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.count-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-active { background: #f0fdf4; color: #16a34a; }
+
+.btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.btn-manage { background: white; color: #2563eb; border: 1px solid #bfdbfe; }
+.btn-manage:hover { background: #eff6ff; }
