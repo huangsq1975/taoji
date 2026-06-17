@@ -162,6 +162,10 @@
   flex-direction: column;
   overflow: hidden;
   background: #f8fafc;
+  transition: margin-right 0.25s ease;
+}
+.main-wrapper-shifted {
+  margin-right: 420px;
 }
 
 /* Topbar */

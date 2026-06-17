@@ -1,4 +1,6 @@
+import { useState, useCallback } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import AiAssistant from '../AiAssistant/AiAssistant'
 import './Layout.css'
 
 const navSections = [
@@ -54,6 +56,8 @@ function getBreadcrumb(pathname: string): string[] {
 export default function Layout() {
   const location = useLocation()
   const crumbs = getBreadcrumb(location.pathname)
+  const [aiOpen, setAiOpen] = useState(false)
+  const handlePanelChange = useCallback((open: boolean) => setAiOpen(open), [])
 
   return (
     <div className="layout">
@@ -98,7 +102,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="main-wrapper">
+      <div className={`main-wrapper${aiOpen ? ' main-wrapper-shifted' : ''}`}>
         <header className="topbar">
           <div className="breadcrumb">
             {crumbs.map((crumb, i) => (
@@ -126,6 +130,8 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <AiAssistant onPanelChange={handlePanelChange} />
     </div>
   )
 }
