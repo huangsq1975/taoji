@@ -1,0 +1,35 @@
+<view class="page-wrap">
+  <navigation-bar title="客户列表" background="#fff" color="#172033" />
+
+  <view class="filter-bar">
+    <view wx:for="{{filters}}" wx:key="key"
+      class="filter-item {{activeFilter === item.key ? 'active' : ''}}"
+      bindtap="onFilterTap" data-key="{{item.key}}">
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="scroll-area">
+    <view wx:for="{{customers}}" wx:key="id" class="client-card" bindtap="onClientTap" data-id="{{item.id}}">
+      <view class="client-card-head">
+        <view class="client-name-wrap">
+          <text class="client-name">{{item.name}}</text>
+          <text class="client-advisor">{{item.advisor}}</text>
+        </view>
+        <view class="badge {{item.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
+          <text>{{item.complete}}%</text>
+        </view>
+      </view>
+      <text class="client-meta">{{item.stage}} · {{item.industry}} · 缺口 {{item.block}}</text>
+      <view class="progress-bar">
+        <view class="progress-bar-fill {{item.complete < 70 ? 'progress-bar-fill-warn' : ''}}" style="width: {{item.complete}}%" />
+      </view>
+      <view class="client-card-actions">
+        <view class="action-btn" catchtap="onBankTap" data-id="{{item.id}}">
+          <text>整理材料</text>
+        </view>
+      </view>
+    </view>
+    <view style="height: 40rpx" />
+  </scroll-view>
+</view>

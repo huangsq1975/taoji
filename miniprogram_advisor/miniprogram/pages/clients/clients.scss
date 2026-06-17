@@ -1,0 +1,37 @@
+.page-wrap { display: flex; flex-direction: column; height: 100vh; background: #f8fbff; }
+
+.filter-bar {
+  display: flex; flex-direction: row; gap: 0;
+  background: #fff; border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0;
+}
+.filter-item {
+  flex: 1; padding: 20rpx 0; text-align: center;
+  font-size: 26rpx; color: #64748b; border-bottom: 3rpx solid transparent;
+}
+.filter-item.active { color: #185FA5; border-bottom-color: #185FA5; font-weight: 600; }
+
+.scroll-area { flex: 1; padding: 16rpx 24rpx 0; }
+
+.client-card {
+  background: #fff; border-radius: 16rpx;
+  padding: 24rpx; margin-bottom: 16rpx;
+}
+.client-card-head { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 8rpx; }
+.client-name-wrap { flex: 1; }
+.client-name { font-size: 28rpx; font-weight: 700; color: #172033; display: block; }
+.client-advisor { font-size: 22rpx; color: #94a3b8; margin-top: 2rpx; display: block; }
+.client-meta { font-size: 24rpx; color: #64748b; display: block; margin-bottom: 12rpx; }
+
+.progress-bar { height: 8rpx; background: #e5e7eb; border-radius: 100rpx; overflow: hidden; margin-bottom: 16rpx; }
+.progress-bar-fill { height: 100%; background: #185FA5; border-radius: 100rpx; }
+.progress-bar-fill-warn { background: #d97706; }
+
+.client-card-actions { display: flex; flex-direction: row; gap: 12rpx; }
+.action-btn {
+  padding: 12rpx 24rpx; background: #eff6ff;
+  border-radius: 100rpx; font-size: 24rpx; color: #185FA5; font-weight: 500;
+}
+
+.badge { display: inline-flex; align-items: center; padding: 4rpx 14rpx; border-radius: 100rpx; font-size: 22rpx; font-weight: 600; }
+.badge-ok { background: #ecfdf5; color: #059669; }
+.badge-warn { background: #fffbeb; color: #d97706; }

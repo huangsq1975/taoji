@@ -1,0 +1,58 @@
+<view class="page-wrap" wx:if="{{customer}}">
+  <navigation-bar title="客户详情" background="#fff" color="#172033" />
+
+  <scroll-view scroll-y class="scroll-area">
+    <!-- Header -->
+    <view class="client-header">
+      <text class="client-name">{{customer.name}}</text>
+      <view class="tag-row">
+        <view wx:for="{{customer.qual}}" wx:key="*this" class="qual-tag"><text>{{item}}</text></view>
+      </view>
+    </view>
+
+    <!-- Profile -->
+    <view class="card">
+      <text class="card-title">企业画像</text>
+      <view class="info-row"><text class="label">行业/年限</text><text class="value">{{customer.industry}} · 成立{{customer.years}}</text></view>
+      <view class="info-row"><text class="label">法人/实控人</text><text class="value">{{customer.owner}}，学历{{customer.edu}}</text></view>
+      <view class="info-row"><text class="label">员工规模</text><text class="value">{{customer.staff}}</text></view>
+      <view class="info-row"><text class="label">经营流水</text><text class="value">{{customer.revenue}}</text></view>
+      <view class="info-row"><text class="label">税务情况</text><text class="value">{{customer.tax}}</text></view>
+      <view class="info-row"><text class="label">征信情况</text><text class="value">{{customer.credit}}</text></view>
+      <view class="info-row"><text class="label">经营场地</text><text class="value">{{customer.office}}</text></view>
+    </view>
+
+    <!-- Progress -->
+    <view class="card">
+      <view class="progress-head">
+        <text class="card-title" style="margin-bottom:0">资料进度 · {{customer.complete}}%</text>
+        <view class="badge {{customer.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
+          <text>{{customer.risk}}风险</text>
+        </view>
+      </view>
+      <view class="progress-bar" style="margin: 16rpx 0">
+        <view class="progress-bar-fill {{customer.complete < 70 ? 'progress-bar-fill-warn' : ''}}" style="width: {{customer.complete}}%" />
+      </view>
+      <view class="info-row"><text class="label">已上传</text><text class="value">{{uploadedDocs.join('、')}}</text></view>
+      <view class="info-row"><text class="label">资料缺口</text><text class="value warn-text">{{missingDocs.join('、')}}</text></view>
+      <view class="info-row"><text class="label">AI建议</text><text class="value">{{customer.next}}</text></view>
+    </view>
+
+    <!-- Status -->
+    <view class="card">
+      <text class="card-title">当前状态</text>
+      <view class="info-row"><text class="label">作业阶段</text><text class="value blue-text">{{customer.stage}}</text></view>
+      <view class="info-row"><text class="label">当前卡点</text><text class="value">{{customer.block}}</text></view>
+    </view>
+
+    <!-- Actions -->
+    <view class="card">
+      <view class="action-row">
+        <view class="pill-btn pill-btn-primary" bindtap="onBankTap"><text>整理银行材料</text></view>
+        <view class="pill-btn" bindtap="onRemindTap"><text>提醒客户补资料</text></view>
+      </view>
+    </view>
+
+    <view style="height: 40rpx" />
+  </scroll-view>
+</view>

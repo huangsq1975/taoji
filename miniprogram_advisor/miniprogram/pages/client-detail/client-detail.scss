@@ -1,0 +1,29 @@
+.page-wrap { display: flex; flex-direction: column; height: 100vh; background: #f8fbff; }
+.scroll-area { flex: 1; padding: 0 24rpx; }
+
+.client-header { padding: 24rpx 0 16rpx; }
+.client-name { font-size: 34rpx; font-weight: 700; color: #172033; display: block; margin-bottom: 12rpx; }
+.tag-row { display: flex; flex-direction: row; gap: 10rpx; flex-wrap: wrap; }
+.qual-tag { background: #eff6ff; color: #185FA5; font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 100rpx; }
+
+.card { background: #fff; border-radius: 16rpx; padding: 28rpx 24rpx; margin-bottom: 20rpx; }
+.card-title { font-size: 28rpx; font-weight: 700; color: #172033; margin-bottom: 16rpx; display: block; }
+.info-row { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; padding: 14rpx 0; border-bottom: 1rpx solid #f0f4f8; gap: 16rpx; font-size: 26rpx; }
+.info-row:last-child { border-bottom: none; }
+.label { color: #94a3b8; flex-shrink: 0; }
+.value { color: #172033; font-weight: 500; text-align: right; flex: 1; }
+.warn-text { color: #d97706; }
+.blue-text { color: #185FA5; }
+
+.progress-head { display: flex; flex-direction: row; justify-content: space-between; align-items: center; }
+.progress-bar { height: 8rpx; background: #e5e7eb; border-radius: 100rpx; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: #185FA5; border-radius: 100rpx; }
+.progress-bar-fill-warn { background: #d97706; }
+
+.badge { display: inline-flex; align-items: center; padding: 4rpx 14rpx; border-radius: 100rpx; font-size: 22rpx; font-weight: 600; }
+.badge-ok { background: #ecfdf5; color: #059669; }
+.badge-warn { background: #fffbeb; color: #d97706; }
+
+.action-row { display: flex; flex-direction: column; gap: 16rpx; }
+.pill-btn { display: flex; align-items: center; justify-content: center; padding: 22rpx; border-radius: 100rpx; border: 1rpx solid #dde7f3; background: #fff; color: #185FA5; font-size: 28rpx; font-weight: 600; }
+.pill-btn-primary { background: #185FA5; color: #fff; border-color: #185FA5; }

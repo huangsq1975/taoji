@@ -1,0 +1,165 @@
+<view class="page-wrap">
+  <!-- Top Bar -->
+  <view class="topbar" style="padding-top: {{statusBarHeight}}px">
+    <view class="topbar-left">
+      <view class="icon-btn" bindtap="onMenuTap">
+        <text class="icon-text">☰</text>
+      </view>
+      <view class="icon-btn" bindtap="onNewChat">
+        <text class="icon-text">✎</text>
+      </view>
+    </view>
+    <text class="topbar-brand">韬纪元 · 顾问</text>
+    <view class="topbar-right" />
+  </view>
+
+  <!-- Chat area -->
+  <view class="chat-area">
+    <!-- Welcome screen -->
+    <view class="welcome" wx:if="{{messages.length === 0}}">
+      <view class="welcome-logo">
+        <text class="logo-icon">🤖</text>
+      </view>
+      <text class="welcome-title">顾问作业台</text>
+      <text class="welcome-sub">AI帮你整理银行材料、识别资料缺口、优化沟通话术</text>
+      <view class="pill-list">
+        <view wx:for="{{quickPills}}" wx:key="*this" class="quick-pill" bindtap="onPillTap" data-text="{{item}}">
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Message list -->
+    <scroll-view wx:else scroll-y class="msg-scroll" scroll-into-view="{{scrollToId}}" scroll-with-animation>
+      <view class="msg-list">
+        <view wx:for="{{messages}}" wx:key="id" id="{{item.id}}"
+          class="msg-wrap {{item.role === 'user' ? 'msg-wrap-user' : 'msg-wrap-ai'}}">
+          <view wx:if="{{item.role === 'ai'}}" class="ai-label">韬纪元AI · 顾问助手</view>
+          <view class="msg-bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+            <text class="msg-text" selectable>{{item.content}}</text>
+          </view>
+          <text wx:if="{{item.time}}" class="msg-time">{{item.time}}</text>
+        </view>
+      </view>
+      <view style="height: 240rpx" />
+    </scroll-view>
+  </view>
+
+  <!-- Context bar (customer selector) -->
+  <view class="context-bar" bindtap="onContextBarTap">
+    <view class="context-bar-main">
+      <text wx:if="{{selectedCustomer}}" class="context-bar-name">当前客户：{{selectedCustomer.name}}</text>
+      <text wx:if="{{selectedCustomer}}" class="context-bar-sub">资料完整度 {{selectedCustomer.complete}}% · {{selectedCustomer.block}}</text>
+      <text wx:else class="context-bar-name">请选择客户后再让 AI 识别资料</text>
+      <text wx:else class="context-bar-sub">点击选择顾问名下客户，AI 会按该客户资料作业</text>
+    </view>
+    <text class="context-bar-btn">{{selectedCustomer ? '切换' : '选择'}}</text>
+  </view>
+
+  <!-- Input bar -->
+  <view class="input-bar">
+    <view class="icon-btn gray" bindtap="onUploadTap">
+      <text class="icon-text">⊕</text>
+    </view>
+    <input class="input-field" placeholder="描述作业需求或选择客户..."
+      placeholder-class="input-placeholder" value="{{inputValue}}"
+      bindinput="onInputChange" confirm-type="send" bindconfirm="onSendTap" adjust-position />
+    <view class="send-btn {{inputValue ? 'send-btn-active' : ''}}" bindtap="onSendTap">
+      <text class="send-icon">➤</text>
+    </view>
+  </view>
+
+  <!-- Sidebar -->
+  <view wx:if="{{sidebarVisible}}" class="sidebar-mask" bindtap="onSidebarMaskTap">
+    <view class="sidebar" catchtap="">
+      <view class="sidebar-header">
+        <text class="sidebar-title">韬纪元 · 顾问</text>
+        <text class="sidebar-sub">{{advisorName}}</text>
+      </view>
+      <view class="sidebar-section">
+        <text class="sidebar-section-label">作业工具</text>
+        <view class="sidebar-item" bindtap="onBankTap">
+          <text class="sidebar-icon">🏦</text>
+          <text class="sidebar-item-label">银行材料整理</text>
+        </view>
+        <view class="sidebar-item" bindtap="onClientsTap">
+          <text class="sidebar-icon">👥</text>
+          <text class="sidebar-item-label">客户列表</text>
+        </view>
+        <view class="sidebar-item" bindtap="onUploadTap">
+          <text class="sidebar-icon">📷</text>
+          <text class="sidebar-item-label">上传/拍摄资料</text>
+        </view>
+      </view>
+      <view class="sidebar-divider" />
+      <view class="sidebar-section">
+        <text class="sidebar-section-label">AI 助手</text>
+        <view class="sidebar-item" bindtap="onPillTap" data-text="识别客户资料缺口">
+          <text class="sidebar-icon">🔍</text>
+          <text class="sidebar-item-label">AI 资料识别</text>
+        </view>
+        <view class="sidebar-item" bindtap="onPillTap" data-text="优化银行沟通话术">
+          <text class="sidebar-icon">💬</text>
+          <text class="sidebar-item-label">话术助手</text>
+        </view>
+        <view class="sidebar-item" bindtap="onPillTap" data-text="帮我复核填表问题字段">
+          <text class="sidebar-icon">✏️</text>
+          <text class="sidebar-item-label">填表修改助手</text>
+        </view>
+      </view>
+      <view class="sidebar-divider" />
+      <view class="sidebar-section">
+        <text class="sidebar-section-label">个人</text>
+        <view class="sidebar-item" bindtap="onHistoryTap">
+          <text class="sidebar-icon">🕐</text>
+          <text class="sidebar-item-label">历史对话</text>
+        </view>
+        <view class="sidebar-item" bindtap="onMineTap">
+          <text class="sidebar-icon">👤</text>
+          <text class="sidebar-item-label">我的</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Upload sheet -->
+  <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="camera">
+        <text class="sheet-icon">📷</text><text>拍摄现场资料</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
+        <text class="sheet-icon">📄</text><text>手机本地文件</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
+        <text class="sheet-icon">💬</text><text>从微信聊天记录中选择</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onUploadSheetClose"><text>取消</text></view>
+    </view>
+  </view>
+
+  <!-- Customer picker -->
+  <view wx:if="{{customerPickerVisible}}" class="sheet-mask" bindtap="onCustomerPickerClose">
+    <view class="picker-sheet" catchtap="">
+      <view class="picker-head">
+        <text class="picker-title">选择客户</text>
+        <text class="picker-sub">选择后，AI资料识别和银行材料建议都会绑定该客户</text>
+        <input class="picker-search" placeholder="搜索企业名称、联系人、行业"
+          value="{{searchKeyword}}" bindinput="onSearchInput" />
+      </view>
+      <scroll-view scroll-y class="picker-list">
+        <view wx:for="{{customers}}" wx:key="id" class="picker-item" bindtap="onSelectCustomer" data-id="{{item.id}}">
+          <view class="picker-item-main">
+            <text class="picker-item-name">{{item.name}}</text>
+            <view class="badge {{item.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
+              <text>{{item.complete}}%</text>
+            </view>
+          </view>
+          <text class="picker-item-sub">{{item.owner}} · {{item.stage}} · 缺口 {{item.block}}</text>
+        </view>
+      </scroll-view>
+      <view class="sheet-cancel" bindtap="onCustomerPickerClose"><text>取消</text></view>
+    </view>
+  </view>
+</view>

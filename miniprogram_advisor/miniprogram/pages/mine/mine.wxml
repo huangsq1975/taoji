@@ -1,0 +1,64 @@
+<view class="page-wrap">
+  <navigation-bar title="我的" background="#fff" color="#172033" />
+  <scroll-view scroll-y class="scroll-area">
+    <!-- Profile -->
+    <view class="profile-card">
+      <view class="avatar"><text class="avatar-icon">👨‍💼</text></view>
+      <view class="profile-info">
+        <text class="profile-name">{{advisor.name}}</text>
+        <text class="profile-role">{{advisor.role}}</text>
+      </view>
+      <view class="status-badge"><text>{{advisor.status}}</text></view>
+    </view>
+
+    <!-- Role info -->
+    <view class="card">
+      <text class="card-title">角色信息</text>
+      <view class="info-row"><text class="label">所属机构</text><text class="value">{{advisor.institution}}</text></view>
+      <view class="info-row"><text class="label">角色</text><text class="value">高级助贷顾问 · 企业资料作业</text></view>
+      <view class="info-row"><text class="label">职责</text><text class="value">客户资料收集、银行材料整理、AI复核</text></view>
+    </view>
+
+    <!-- My clients -->
+    <view class="card" bindtap="onClientsTap">
+      <view class="card-head-row">
+        <text class="card-title" style="margin-bottom:0">我的客户</text>
+        <text class="card-link">查看全部 ›</text>
+      </view>
+      <view class="info-row"><text class="label">在手客户</text><text class="value">{{totalClients}} 位</text></view>
+      <view class="info-row"><text class="label">待补资料</text><text class="value">{{pendingClients}} 位</text></view>
+      <view class="info-row"><text class="label">待复核</text><text class="value">{{reviewClients}} 位</text></view>
+    </view>
+
+    <!-- Quota -->
+    <view class="card">
+      <text class="card-title">调用次数</text>
+      <view class="info-row"><text class="label">剩余调用</text><text class="value blue-text">{{quotaRemaining}} 次</text></view>
+      <view class="info-row"><text class="label">AI填表</text><text class="value">已用 {{quotaFill}} 次</text></view>
+      <view class="info-row"><text class="label">材料包</text><text class="value">已用 {{quotaExport}} 次</text></view>
+    </view>
+
+    <!-- Notifications -->
+    <view class="card">
+      <text class="card-title">消息通知</text>
+      <view wx:for="{{notifications}}" wx:key="id" class="notify-item">
+        <view class="notify-dot dot-{{item.dotColor}}" />
+        <view class="notify-body">
+          <text class="notify-title">{{item.title}}</text>
+          <text class="notify-text">{{item.body}}</text>
+          <text class="notify-time">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Settings -->
+    <view class="card">
+      <text class="card-title">设置</text>
+      <view class="info-row"><text class="label">消息通知</text><text class="value">客户补资料、材料包待复核</text></view>
+      <view class="info-row"><text class="label">隐私授权</text><text class="value">仅用于客户资料整理</text></view>
+      <view class="info-row"><text class="label">帮助中心</text><text class="value">材料口径、AI修改助手说明</text></view>
+    </view>
+
+    <view style="height: 40rpx" />
+  </scroll-view>
+</view>
