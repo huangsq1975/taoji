@@ -1,11 +1,19 @@
 {
   "pages": [
+    "pages/chat/chat",
+    "pages/progress/progress",
+    "pages/notify/notify",
+    "pages/mine/mine",
+    "pages/advisor/advisor",
+    "pages/auth/auth",
+    "pages/history/history",
     "pages/index/index",
     "pages/logs/logs"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationStyle": "custom"
+    "navigationStyle": "custom",
+    "backgroundColor": "#f8fbff"
   },
   "style": "v2",
   "rendererOptions": {

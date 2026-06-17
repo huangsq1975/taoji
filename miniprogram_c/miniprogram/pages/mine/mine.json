@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "tab-bar": "/components/tab-bar/tab-bar",
+    "navigation-bar": "/components/navigation-bar/navigation-bar"
+  },
+  "navigationStyle": "custom",
+  "renderer": "skyline"
+}

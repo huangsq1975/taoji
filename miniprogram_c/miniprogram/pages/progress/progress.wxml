@@ -1,0 +1,98 @@
+<view class="page-wrap">
+  <navigation-bar title="办理进度" background="#fff" color="#172033" />
+
+  <scroll-view scroll-y class="scroll-area">
+    <!-- Current status -->
+    <view class="card">
+      <text class="card-title">当前状态</text>
+      <view class="info-row">
+        <text class="label">当前阶段</text>
+        <text class="value blue">{{currentStage}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">当前卡点</text>
+        <text class="value">{{blocker}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">下一步</text>
+        <text class="value">{{nextStep}}</text>
+      </view>
+    </view>
+
+    <!-- Timeline -->
+    <view class="card">
+      <text class="card-title">服务时间线</text>
+      <view class="timeline">
+        <view
+          wx:for="{{steps}}"
+          wx:key="label"
+          class="timeline-item {{item.status}}"
+        >
+          <view class="timeline-dot-wrap">
+            <view class="timeline-dot" />
+            <view class="timeline-line" wx:if="{{index < steps.length - 1}}" />
+          </view>
+          <view class="timeline-content">
+            <text class="timeline-label">{{item.label}}</text>
+            <text class="timeline-time">{{item.time}}{{item.desc ? ' · ' + item.desc : ''}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Pending docs -->
+    <view class="card">
+      <text class="card-title">待客户处理</text>
+      <view
+        wx:for="{{pendingDocs}}"
+        wx:key="name"
+        class="doc-item"
+      >
+        <view class="doc-info">
+          <text class="doc-name">{{item.name}}</text>
+          <text class="doc-desc">{{item.desc}}</text>
+        </view>
+        <view class="badge {{item.status === 'missing' ? 'badge-warn' : 'badge-ok'}}">
+          <text>{{item.status === 'missing' ? '待补' : '已记录'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Advisor message -->
+    <view class="card">
+      <text class="card-title">顾问留言</text>
+      <view class="advisor-msg-box">
+        <text class="advisor-name">张顾问：</text>
+        <text class="advisor-msg-text">{{advisorMessage}}</text>
+      </view>
+    </view>
+
+    <!-- Upload button -->
+    <view class="card">
+      <view class="pill-btn pill-btn-primary" bindtap="onUploadTap">
+        <text>上传资料</text>
+      </view>
+    </view>
+
+    <view style="height: 20rpx" />
+  </scroll-view>
+
+  <tab-bar active-tab="progress" />
+
+  <!-- Upload sheet -->
+  <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="camera">
+        <text class="sheet-icon">📷</text><text>拍照</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
+        <text class="sheet-icon">📄</text><text>手机本地文件</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
+        <text class="sheet-icon">💬</text><text>从微信聊天记录中选择</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onUploadSheetClose"><text>取消</text></view>
+    </view>
+  </view>
+</view>

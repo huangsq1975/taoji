@@ -1,0 +1,25 @@
+<view class="page-wrap">
+  <navigation-bar title="消息通知" background="#fff" color="#172033" back="{{false}}" />
+
+  <scroll-view scroll-y class="scroll-area">
+    <view class="card">
+      <view
+        wx:for="{{notifications}}"
+        wx:key="id"
+        class="notify-item {{item.read ? 'read' : ''}}"
+        bindtap="onMarkRead"
+        data-id="{{item.id}}"
+      >
+        <view class="notify-dot dot-{{item.dotColor}}" />
+        <view class="notify-body">
+          <text class="notify-title">{{item.title}}</text>
+          <text class="notify-text">{{item.body}}</text>
+          <text class="notify-time">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+    <text class="footer-note">仅展示近7天通知</text>
+  </scroll-view>
+
+  <tab-bar active-tab="notify" />
+</view>

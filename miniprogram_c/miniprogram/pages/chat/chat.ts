@@ -1,0 +1,150 @@
+import { quickPills, getAiReply, ChatMessage } from '../../utils/mock'
+
+const app = getApp<IAppOption>()
+
+let msgIdCounter = 0
+function genId(): string {
+  msgIdCounter += 1
+  return `msg_${msgIdCounter}`
+}
+
+Page({
+  data: {
+    messages: [] as ChatMessage[],
+    quickPills,
+    inputValue: '',
+    sidebarVisible: false,
+    uploadSheetVisible: false,
+    scrollToId: '',
+    statusBarHeight: 0,
+    userName: '您',
+  },
+
+  onLoad() {
+    wx.getSystemInfo({
+      success: (res) => {
+        this.setData({ statusBarHeight: res.statusBarHeight })
+      },
+    })
+    const user = app.globalData.userInfo
+    if (user) {
+      this.setData({ userName: user.name })
+    }
+  },
+
+  onInputChange(e: WechatMiniprogram.Input) {
+    this.setData({ inputValue: e.detail.value })
+  },
+
+  onSendTap() {
+    const text = this.data.inputValue.trim()
+    if (!text) return
+    this.setData({ inputValue: '' })
+    this.addMessage('user', text)
+    this.replyAI(text)
+  },
+
+  onPillTap(e: WechatMiniprogram.TouchEvent) {
+    const text = e.currentTarget.dataset['text'] as string
+    this.addMessage('user', text)
+    this.replyAI(text)
+  },
+
+  addMessage(role: 'user' | 'ai', content: string) {
+    const id = genId()
+    const msg: ChatMessage = {
+      id,
+      role,
+      content,
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    }
+    const messages = [...this.data.messages, msg]
+    this.setData({ messages, scrollToId: id })
+  },
+
+  replyAI(userText: string) {
+    const thinkingId = genId()
+    const thinking: ChatMessage = { id: thinkingId, role: 'ai', content: '正在分析...', time: '' }
+    this.setData({ messages: [...this.data.messages, thinking] })
+    setTimeout(() => {
+      const reply = getAiReply(userText)
+      const msgs = this.data.messages.map(m =>
+        m.id === thinkingId ? { ...m, content: reply, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) } : m
+      )
+      this.setData({ messages: msgs, scrollToId: thinkingId })
+    }, 600)
+  },
+
+  onNewChat() {
+    this.setData({ messages: [], sidebarVisible: false })
+  },
+
+  onMenuTap() {
+    this.setData({ sidebarVisible: !this.data.sidebarVisible })
+  },
+
+  onSidebarMaskTap() {
+    this.setData({ sidebarVisible: false })
+  },
+
+  onUploadTap() {
+    this.setData({ uploadSheetVisible: true, sidebarVisible: false })
+  },
+
+  onUploadSheetClose() {
+    this.setData({ uploadSheetVisible: false })
+  },
+
+  onUploadChoose(e: WechatMiniprogram.TouchEvent) {
+    const type = e.currentTarget.dataset['type'] as string
+    this.setData({ uploadSheetVisible: false })
+    const labels: Record<string, string> = {
+      camera: '拍照上传',
+      local: '手机本地文件',
+      wechat: '从微信聊天记录中选择',
+    }
+    const names: Record<string, string> = {
+      camera: '现场拍照_营业执照.jpg',
+      local: '企业经营流水_2026.pdf',
+      wechat: '微信收到_征信报告截图.png',
+    }
+    this.addMessage('user', `[${labels[type] ?? type}] ${names[type] ?? '文件'}`)
+    this.replyAI('upload')
+  },
+
+  onProgressTap() {
+    this.setData({ sidebarVisible: false })
+    wx.navigateTo({ url: '/pages/progress/progress' })
+  },
+
+  onAdvisorTap() {
+    this.setData({ sidebarVisible: false })
+    wx.navigateTo({ url: '/pages/advisor/advisor' })
+  },
+
+  onNotifyTap() {
+    this.setData({ sidebarVisible: false })
+    wx.redirectTo({ url: '/pages/notify/notify' })
+  },
+
+  onAuthTap() {
+    this.setData({ sidebarVisible: false })
+    wx.navigateTo({ url: '/pages/auth/auth' })
+  },
+
+  onHistoryTap() {
+    this.setData({ sidebarVisible: false })
+    wx.navigateTo({ url: '/pages/history/history' })
+  },
+
+  onMineTap() {
+    this.setData({ sidebarVisible: false })
+    wx.redirectTo({ url: '/pages/mine/mine' })
+  },
+
+  onCreditTap() {
+    this.setData({ sidebarVisible: false })
+    this.addMessage('user', '查企业征信')
+    this.replyAI('查企业征信')
+  },
+})

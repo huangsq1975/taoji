@@ -1,10 +1,105 @@
-/**app.wxss**/
-.container {
-  height: 100%;
+page {
+  background: #f8fbff;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  color: #172033;
+  box-sizing: border-box;
+}
+
+.page-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  min-height: 100vh;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #172033;
+  margin-bottom: 16rpx;
+}
+
+/* Rows */
+.info-row {
+  display: flex;
   justify-content: space-between;
-  padding: 200rpx 0;
-  box-sizing: border-box;
-} 
+  align-items: center;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f0f4f8;
+  font-size: 26rpx;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  color: #94a3b8;
+}
+
+.info-row .value {
+  color: #172033;
+  font-weight: 500;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 14rpx;
+  border-radius: 100rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.badge-ok {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.badge-warn {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.badge-gray {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.badge-blue {
+  background: #eff6ff;
+  color: #185FA5;
+}
+
+/* Pill button */
+.pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  border-radius: 100rpx;
+  border: 1rpx solid #dde7f3;
+  background: #fff;
+  color: #185FA5;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.pill-btn-primary {
+  background: #185FA5;
+  color: #fff;
+  border-color: #185FA5;
+}
+
+/* Safe area bottom */
+.safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

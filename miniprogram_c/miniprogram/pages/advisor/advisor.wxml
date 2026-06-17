@@ -1,0 +1,34 @@
+<view class="page-wrap">
+  <navigation-bar title="联系顾问" background="#fff" color="#172033" />
+  <scroll-view scroll-y class="scroll-area">
+    <view class="card">
+      <view class="advisor-profile">
+        <view class="advisor-avatar"><text class="avatar-icon">👨‍💼</text></view>
+        <view class="advisor-info">
+          <text class="advisor-name">{{advisor.name}}</text>
+          <text class="advisor-role">{{advisor.role}}</text>
+          <text class="advisor-stats">{{advisor.stats}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">顾问留言</text>
+      <view class="msg-box">
+        <text class="msg-sender">{{advisor.name}}：</text>
+        <text class="msg-content">{{advisor.message}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="btn-row">
+        <view class="contact-btn phone-btn" bindtap="onPhoneCall">
+          <text>📞 电话联系</text>
+        </view>
+        <view class="contact-btn wechat-btn" bindtap="onWechatTap">
+          <text>💬 微信联系</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>
