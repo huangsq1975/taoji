@@ -81,9 +81,6 @@
     </view>
   </view>
 
-  <!-- Tab bar -->
-  <tab-bar active-tab="chat" />
-
   <!-- Sidebar overlay -->
   <view wx:if="{{sidebarVisible}}" class="sidebar-mask" bindtap="onSidebarMaskTap">
     <view class="sidebar" catchtap="">
@@ -124,12 +121,10 @@
           <text class="sidebar-icon">🕐</text>
           <text class="sidebar-item-label">历史对话</text>
         </view>
-      </view>
-      <view class="sidebar-footer" bindtap="onMineTap">
-        <view class="sidebar-avatar">
-          <text>👤</text>
+        <view class="sidebar-item" bindtap="onMineTap">
+          <text class="sidebar-icon">👤</text>
+          <text class="sidebar-item-label">我的</text>
         </view>
-        <text class="sidebar-user-name">{{userName}}</text>
       </view>
     </view>
   </view>

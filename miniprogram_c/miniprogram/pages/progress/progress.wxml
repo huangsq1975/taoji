@@ -77,8 +77,6 @@
     <view style="height: 20rpx" />
   </scroll-view>
 
-  <tab-bar active-tab="progress" />
-
   <!-- Upload sheet -->
   <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
     <view class="sheet" catchtap="">
