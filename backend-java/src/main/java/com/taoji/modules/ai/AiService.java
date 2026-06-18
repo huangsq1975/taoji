@@ -98,17 +98,12 @@ public class AiService {
                 .where(DSL.field("id").eq(taskId))
                 .execute();
 
-        // Update document status
-        dsl.update(DSL.table("customer_documents"))
-                .set(DSL.field("ai_parse_status"), "PROCESSING")
-                .where(DSL.field("customer_id").eq(customerId))
-                .and(DSL.field("deleted_at").isNull())
-                .execute();
-
         try {
             // Get documents to process
             List<Record> documents;
-            if ("single_doc".equals(scope) && documentIds != null && !documentIds.isEmpty()) {
+            boolean scopedToSpecificDocs = ("single_doc".equals(scope) || "reparse".equals(scope))
+                    && documentIds != null && !documentIds.isEmpty();
+            if (scopedToSpecificDocs) {
                 documents = dsl.select()
                         .from(DSL.table("customer_documents"))
                         .where(DSL.field("id").in(documentIds))
@@ -120,6 +115,17 @@ public class AiService {
                         .where(DSL.field("customer_id").eq(customerId))
                         .and(DSL.field("deleted_at").isNull())
                         .fetch();
+            }
+
+            // Update processing status only for the docs we are about to process
+            List<Long> docIds = documents.stream()
+                    .map(d -> d.get(DSL.field("id", Long.class)))
+                    .toList();
+            if (!docIds.isEmpty()) {
+                dsl.update(DSL.table("customer_documents"))
+                        .set(DSL.field("ai_parse_status"), "PROCESSING")
+                        .where(DSL.field("id").in(docIds))
+                        .execute();
             }
 
             int totalFields = 0;
@@ -155,10 +161,18 @@ public class AiService {
                     totalFields++;
                 }
 
-                // Mark document as parsed
+                // Compute average confidence across all fields for this document
+                double avgConf = parsedFields.stream()
+                        .mapToDouble(f -> ((Number) f.get("confidence")).doubleValue())
+                        .average()
+                        .orElse(0.0);
+
+                // Mark document as parsed, store ai_doc_type and aggregated confidence
                 dsl.update(DSL.table("customer_documents"))
                         .set(DSL.field("ai_parse_status"), "DONE")
                         .set(DSL.field("ai_parsed_at"), LocalDateTime.now())
+                        .set(DSL.field("ai_doc_type"), docType)
+                        .set(DSL.field("confidence"), avgConf)
                         .where(DSL.field("id").eq(docId))
                         .execute();
             }

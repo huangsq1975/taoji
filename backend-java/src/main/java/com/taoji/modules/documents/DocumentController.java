@@ -1,6 +1,9 @@
 package com.taoji.modules.documents;
 
 import com.taoji.common.ApiResponse;
+import com.taoji.common.PageRequest;
+import com.taoji.common.PaginatedResult;
+import com.taoji.modules.documents.dto.ConfirmDocumentRequest;
 import com.taoji.modules.documents.dto.DocumentResponse;
 import com.taoji.security.CurrentUser;
 import com.taoji.security.JwtUserDetails;
@@ -53,5 +56,33 @@ public class DocumentController {
             @CurrentUser JwtUserDetails currentUser,
             @PathVariable Long id) {
         return ApiResponse.ok(documentService.getRecognitionSummary(currentUser, id));
+    }
+
+    @GetMapping("/documents")
+    @Operation(summary = "全机构文档列表", description = "分页查询本机构所有文档，支持 aiParseStatus/customerId 筛选")
+    public ApiResponse<PaginatedResult<DocumentResponse>> listAllDocuments(
+            @CurrentUser JwtUserDetails currentUser,
+            @RequestParam(required = false) String aiParseStatus,
+            @RequestParam(required = false) Long customerId,
+            @ModelAttribute PageRequest pageRequest) {
+        return ApiResponse.ok(documentService.listAllDocuments(currentUser, aiParseStatus, customerId, pageRequest));
+    }
+
+    @PostMapping("/documents/{id}/confirm")
+    @Operation(summary = "确认AI识别结果", description = "将文档状态标记为 DONE；可选传入 docType 修正文件类型")
+    public ApiResponse<DocumentResponse> confirmDocument(
+            @CurrentUser JwtUserDetails currentUser,
+            @PathVariable Long id,
+            @RequestBody(required = false) ConfirmDocumentRequest request) {
+        String docType = request != null ? request.getDocType() : null;
+        return ApiResponse.ok(documentService.confirmDocument(currentUser, id, docType));
+    }
+
+    @PostMapping("/documents/{id}/retry")
+    @Operation(summary = "重新触发AI解析", description = "将文档状态重置为 PENDING 并重新提交识别任务")
+    public ApiResponse<DocumentResponse> retryDocument(
+            @CurrentUser JwtUserDetails currentUser,
+            @PathVariable Long id) {
+        return ApiResponse.ok(documentService.retryDocument(currentUser, id));
     }
 }
