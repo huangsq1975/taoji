@@ -28,7 +28,7 @@ public class DashboardService {
                 .from(DSL.table("customers").as("c"))
                 .where(customerCond)
                 .and(DSL.field("c.deleted_at").isNull())
-                .and(DSL.field("c.status").notIn("DONE", "PAUSED"))
+                .and(DSL.field("c.status::text").notIn("DONE", "PAUSED"))
                 .and(DSL.field("c.doc_completeness").lt(80))
                 .fetchOneInto(Integer.class);
 
@@ -80,7 +80,7 @@ public class DashboardService {
                 .on(DSL.field("c.advisor_id").eq(DSL.field("u.id")))
                 .where(customerCond)
                 .and(DSL.field("c.deleted_at").isNull())
-                .and(DSL.field("c.status").notIn("DONE", "PAUSED"))
+                .and(DSL.field("c.status::text").notIn("DONE", "PAUSED"))
                 .orderBy(DSL.field("c.doc_completeness").asc(), DSL.field("c.updated_at").desc())
                 .limit(6)
                 .fetchMaps();
@@ -112,7 +112,7 @@ public class DashboardService {
                 .leftJoin(DSL.table("users").as("u"))
                 .on(DSL.field("rt.advisor_id").eq(DSL.field("u.id")))
                 .where(DSL.field("rt.institution_id").eq(institutionId))
-                .and(DSL.field("rt.status").notEqual("EXPORTED"))
+                .and(DSL.field("rt.status::text").notEqual("EXPORTED"))
                 .orderBy(DSL.field("rt.updated_at").desc())
                 .limit(3)
                 .fetchMaps();
