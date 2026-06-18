@@ -37,7 +37,7 @@ public class JooqConfig {
                 new DefaultExecuteListenerProvider(new LoggerListener())
         );
         // Auto-convert java.sql.Timestamp → java.time.LocalDateTime for all records
-        config.setConverterProvider(new ConverterProvider() {
+        config.set(new ConverterProvider() {
             private final ConverterProvider delegate = new DefaultConverterProvider();
 
             @Override
@@ -48,7 +48,7 @@ public class JooqConfig {
                             Timestamp.class,
                             LocalDateTime.class,
                             Timestamp::toLocalDateTime,
-                            LocalDateTime::toString
+                            Timestamp::valueOf
                     );
                 }
                 return delegate.provide(tType, uType);
