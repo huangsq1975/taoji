@@ -200,24 +200,97 @@ export function addFollowUp(customerId: number | string, body: { type: string; c
   return api.post<ApiFollowUp>(`/customers/${customerId}/follow-ups`, body)
 }
 
-// Report tasks (for customer detail tab)
+// Report tasks (snake_case - jOOQ fetchMaps returns DB column names)
 export interface ApiReportTask {
   id: number
-  customerId: number
-  advisorId: number | null
-  productId: number
+  institution_id: number
+  customer_id: number
+  customer_name: string
+  advisor_id: number | null
+  advisor_name: string | null
+  product_id: number
+  product_name: string
+  bank_short_name: string
   status: string
-  issueCount: number
-  exportUrl: string | null
-  createdAt: string
-  updatedAt: string
+  issue_count: number
+  export_url: string | null
+  created_at: string
+  updated_at: string
 }
 
-export function listReportTasks(params: { customerId?: number; page?: number; pageSize?: number }) {
+export interface ApiFieldDraft {
+  id: number
+  task_id: number
+  field_key: string
+  field_label: string
+  ai_value: string | null
+  final_value: string | null
+  source_hint: string | null
+  ai_status: 'ok' | 'issue' | 'missing' | 'needs_review'
+  ai_note: string | null
+  review_status: 'pending' | 'approved' | 'corrected' | 'rejected'
+  reviewed_by: number | null
+  reviewed_at: string | null
+}
+
+export interface ReviewFieldBody {
+  fieldId: number
+  reviewStatus: 'approved' | 'corrected' | 'rejected'
+  finalValue?: string
+  reviewNote?: string
+}
+
+export function listReportTasks(params: { customerId?: number; status?: string; page?: number; pageSize?: number }) {
   const qs = new URLSearchParams()
   if (params.customerId) qs.set('customerId', String(params.customerId))
+  if (params.status) qs.set('status', params.status)
   if (params.page) qs.set('page', String(params.page))
   if (params.pageSize) qs.set('pageSize', String(params.pageSize))
   const q = qs.toString()
-  return api.get<PaginatedResult<ApiReportTask>>(`/report-tasks${q ? '?' + q : ''}`)
+  return api.get<PaginatedResult<ApiReportTask>>(`/reports${q ? '?' + q : ''}`)
+}
+
+export function getReportTask(id: number | string) {
+  return api.get<ApiReportTask>(`/reports/${id}`)
+}
+
+export function getReportFields(id: number | string) {
+  return api.get<ApiFieldDraft[]>(`/reports/${id}/fields`)
+}
+
+export function reviewField(id: number | string, body: ReviewFieldBody) {
+  return api.post<ApiFieldDraft>(`/reports/${id}/review`, body)
+}
+
+export function exportReport(id: number | string) {
+  return api.post<ApiReportTask>(`/reports/${id}/export`, {})
+}
+
+export function createReportTask(body: { customerId: number; productId: number }) {
+  return api.post<ApiReportTask>('/reports', body)
+}
+
+// Banks
+export interface ApiBank {
+  id: number
+  name: string
+  shortName: string
+  sortOrder: number
+}
+
+export interface ApiProduct {
+  id: number
+  bankId: number
+  bankName: string
+  name: string
+  productType: string
+}
+
+export function listBanks() {
+  return api.get<ApiBank[]>('/banks')
+}
+
+export function listBankProducts(bankId?: number) {
+  const qs = bankId ? `?bankId=${bankId}` : ''
+  return api.get<ApiProduct[]>(`/banks/products${qs}`)
 }

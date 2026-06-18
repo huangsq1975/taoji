@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, FormEvent, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   getCustomer, getCustomerOverview, listDocuments, uploadDocument, deleteDocument,
-  listFollowUps, addFollowUp, listReportTasks,
+  listFollowUps, addFollowUp, listReportTasks, createReportTask, listBanks, listBankProducts,
   type ApiCustomer, type CustomerOverview, type ApiDocument, type ApiFollowUp, type ApiReportTask,
+  type ApiBank, type ApiProduct,
 } from '../../utils/api'
 import './CustomerDetail.css'
 
@@ -314,6 +315,96 @@ function DocumentsTab({ customerId }: { customerId: number }) {
   )
 }
 
+// ─── New Task Modal ───────────────────────────────────────────────────────────
+
+function NewTaskModal({ customerId, onClose, onCreated }: {
+  customerId: number
+  onClose: () => void
+  onCreated: (task: ApiReportTask) => void
+}) {
+  const [banks, setBanks] = useState<ApiBank[]>([])
+  const [products, setProducts] = useState<ApiProduct[]>([])
+  const [bankId, setBankId] = useState<number | ''>('')
+  const [productId, setProductId] = useState<number | ''>('')
+  const [loadingBanks, setLoadingBanks] = useState(true)
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    listBanks()
+      .then(b => setBanks(b))
+      .catch(() => {})
+      .finally(() => setLoadingBanks(false))
+  }, [])
+
+  useEffect(() => {
+    if (!bankId) { setProducts([]); setProductId(''); return }
+    setLoadingProducts(true)
+    listBankProducts(bankId as number)
+      .then(p => { setProducts(p); setProductId('') })
+      .catch(() => setProducts([]))
+      .finally(() => setLoadingProducts(false))
+  }, [bankId])
+
+  async function handleCreate() {
+    if (!productId) return
+    setCreating(true); setError('')
+    try {
+      const task = await createReportTask({ customerId, productId: productId as number })
+      onCreated(task)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '创建失败')
+      setCreating(false)
+    }
+  }
+
+  return (
+    <div className="modal-mask" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">新建AI填表任务</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="modal-form-field">
+            <label className="modal-form-label">选择银行<span className="modal-required">*</span></label>
+            {loadingBanks ? <span className="cell-sub">加载中…</span> : (
+              <select className="filter-select modal-select"
+                value={bankId}
+                onChange={e => setBankId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">请选择银行</option>
+                {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="modal-form-field">
+            <label className="modal-form-label">选择产品<span className="modal-required">*</span></label>
+            <select className="filter-select modal-select"
+              value={productId}
+              disabled={!bankId || loadingProducts}
+              onChange={e => setProductId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">
+                {!bankId ? '请先选择银行' : loadingProducts ? '加载中…' : products.length === 0 ? '暂无可用产品' : '请选择产品'}
+              </option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          {error && <div className="modal-form-error">{error}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>取消</button>
+          <button className="btn btn-primary"
+            disabled={!productId || creating}
+            onClick={handleCreate}>
+            {creating ? '创建中…' : '🤖 创建并开始填写'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Tab 2: 报告产出 ──────────────────────────────────────────────────────────
 
 function ReportsTab({ customerId }: { customerId: number }) {
@@ -321,6 +412,7 @@ function ReportsTab({ customerId }: { customerId: number }) {
   const [tasks, setTasks] = useState<ApiReportTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showModal, setShowModal] = useState(false)
 
   const fetchTasks = useCallback(async () => {
     setLoading(true); setError('')
@@ -337,7 +429,7 @@ function ReportsTab({ customerId }: { customerId: number }) {
     <div className="tab-content">
       <div className="report-header-row">
         <span className="section-title" style={{ margin: 0 }}>AI填表任务</span>
-        <button className="btn btn-primary" onClick={() => navigate('/reports')}>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           🤖 新建AI填表任务
         </button>
       </div>
@@ -351,6 +443,7 @@ function ReportsTab({ customerId }: { customerId: number }) {
             <thead>
               <tr>
                 <th>任务ID</th>
+                <th>银行 · 产品</th>
                 <th>状态</th>
                 <th>问题字段</th>
                 <th>创建时间</th>
@@ -364,16 +457,20 @@ function ReportsTab({ customerId }: { customerId: number }) {
                   <tr key={t.id} className="table-row-hover" onClick={() => navigate(`/reports/${t.id}`)}>
                     <td className="cell-main">#{t.id}</td>
                     <td>
+                      <div style={{ fontWeight: 500, fontSize: 13, color: '#0f172a' }}>{t.bank_short_name}</div>
+                      <div className="cell-sub">{t.product_name}</div>
+                    </td>
+                    <td>
                       <span className="badge" style={{ background: sc.bg, color: sc.text }}>
                         {REPORT_STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </td>
                     <td>
-                      {t.issueCount > 0
-                        ? <span className="issue-count">{t.issueCount} 个问题</span>
+                      {t.issue_count > 0
+                        ? <span className="issue-count">{t.issue_count} 个问题</span>
                         : <span className="cell-sub">—</span>}
                     </td>
-                    <td><span className="cell-sub">{formatDate(t.createdAt)}</span></td>
+                    <td><span className="cell-sub">{formatDate(t.created_at)}</span></td>
                     <td>
                       <button className="btn-sm btn-primary"
                         onClick={e => { e.stopPropagation(); navigate(`/reports/${t.id}`) }}>
@@ -389,6 +486,18 @@ function ReportsTab({ customerId }: { customerId: number }) {
             <div className="empty-state">暂无报告任务，点击"新建AI填表任务"开始</div>
           )}
         </div>
+      )}
+
+      {showModal && (
+        <NewTaskModal
+          customerId={customerId}
+          onClose={() => setShowModal(false)}
+          onCreated={task => {
+            setTasks(prev => [task, ...prev])
+            setShowModal(false)
+            navigate(`/reports/${task.id}`)
+          }}
+        />
       )}
     </div>
   )

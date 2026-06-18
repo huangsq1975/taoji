@@ -145,3 +145,32 @@
 .btn-view:hover { background: #f1f5f9; }
 
 .empty-state { text-align: center; padding: 48px; color: #94a3b8; font-size: 14px; }
+
+.btn-sm-create { height: 36px; padding: 0 16px; font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
+.btn-primary { background: #2563eb; color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { background: white; color: #374151; border: 1px solid #e2e8f0; }
+.btn-outline:hover { background: #f8fafc; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.page-btn { padding: 6px 14px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 13px; cursor: pointer; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-info { font-size: 13px; color: #64748b; }
+
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-box { background: white; border-radius: 12px; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
+.modal-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+.modal-close { background: none; border: none; font-size: 16px; color: #94a3b8; cursor: pointer; }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 20px; }
+
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 13px; font-weight: 500; color: #374151; }
+.required { color: #dc2626; margin-left: 2px; }
+.form-select { height: 36px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0 10px; font-size: 13px; color: #0f172a; background: white; outline: none; }
+.form-select:focus { border-color: #2563eb; }
+.form-error { font-size: 12px; color: #dc2626; }
