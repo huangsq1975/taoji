@@ -512,6 +512,21 @@ export function getMembership() {
   return api.get<ApiMembership>('/settings/membership')
 }
 
+// Dashboard stats
+export interface DashboardStats {
+  docGapCount: number
+  taskTotal: number
+  aiPending: number
+  reportQuota: number   // -1 means unlimited
+  reportUsed: number
+  todayCustomers: ApiCustomer[]
+  recentTasks: ApiReportTask[]
+}
+
+export function getDashboardStats() {
+  return api.get<DashboardStats>('/dashboard/stats')
+}
+
 // Org Accounts
 export interface ApiOrgAccount {
   id: number
@@ -533,6 +548,7 @@ export function createOrgAccount(body: {
   phone: string
   role: string
   dataScope: string
+  password?: string
 }) {
   return api.post<ApiOrgAccount>('/settings/accounts', body)
 }

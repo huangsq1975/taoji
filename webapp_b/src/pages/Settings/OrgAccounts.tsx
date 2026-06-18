@@ -62,15 +62,23 @@ function AddAccountModal({ onClose, onCreated }: AddAccountModalProps) {
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState('ADVISOR')
   const [dataScope, setDataScope] = useState('SELF')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
   async function handleSubmit() {
     if (!name.trim() || !phone.trim()) { setErr('姓名和手机号为必填项'); return }
+    if (password.trim() && password.trim().length < 6) { setErr('密码长度至少6位'); return }
     setLoading(true)
     setErr('')
     try {
-      const acc = await createOrgAccount({ name: name.trim(), phone: phone.trim(), role, dataScope })
+      const acc = await createOrgAccount({
+        name: name.trim(),
+        phone: phone.trim(),
+        role,
+        dataScope,
+        password: password.trim() || undefined,
+      })
       onCreated(acc)
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : '创建失败')
@@ -109,6 +117,18 @@ function AddAccountModal({ onClose, onCreated }: AddAccountModalProps) {
               <select className="form-select" value={dataScope} onChange={e => setDataScope(e.target.value)}>
                 {DATA_SCOPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-field" style={{ flex: '1 1 100%' }}>
+              <label className="form-label">初始密码</label>
+              <input
+                className="form-input"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="留空则使用默认密码 Taoji@123"
+              />
             </div>
           </div>
           {err && <div className="form-error">{err}</div>}

@@ -16,7 +16,7 @@ public class MemberResponse {
     private String phone;
     private String role;
     private String dataScope;
-    private Integer status;
+    private String status;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
     private List<String> permissions;

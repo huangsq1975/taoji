@@ -176,6 +176,46 @@ public class UserService {
         return mapToMemberResponse(r, permissions);
     }
 
+    public List<MemberResponse> listAllMembers(Long institutionId) {
+        List<Record> records = dsl.select()
+                .from(DSL.table("users"))
+                .where(DSL.field("institution_id").eq(institutionId))
+                .and(DSL.field("deleted_at").isNull())
+                .orderBy(DSL.field("created_at").desc())
+                .fetch();
+
+        return records.stream().map(r -> {
+            Long userId = r.get(DSL.field("id", Long.class));
+            List<String> permissions = loadPermissions(userId);
+            return mapToMemberResponse(r, permissions);
+        }).toList();
+    }
+
+    @Transactional
+    public MemberResponse toggleMember(Long institutionId, Long memberId) {
+        Record userRecord = dsl.select()
+                .from(DSL.table("users"))
+                .where(DSL.field("id").eq(memberId))
+                .and(DSL.field("institution_id").eq(institutionId))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOne();
+
+        if (userRecord == null) {
+            throw AppException.notFound("用户不存在");
+        }
+
+        Short currentStatus = userRecord.get(DSL.field("status", Short.class));
+        short newStatus = Short.valueOf((short)1).equals(currentStatus) ? (short) 0 : (short) 1;
+
+        dsl.update(DSL.table("users"))
+                .set(DSL.field("status"), newStatus)
+                .set(DSL.field("updated_at"), LocalDateTime.now())
+                .where(DSL.field("id").eq(memberId))
+                .execute();
+
+        return getMemberById(institutionId, memberId);
+    }
+
     private void savePermissions(Long userId, List<String> permissions) {
         for (String perm : permissions) {
             dsl.insertInto(DSL.table("user_permissions"))
@@ -227,7 +267,7 @@ public class UserService {
                 .phone(r.get(DSL.field("phone", String.class)))
                 .role(r.get(DSL.field("role", String.class)))
                 .dataScope(r.get(DSL.field("data_scope", String.class)))
-                .status(r.get(DSL.field("status", Short.class)).intValue())
+                .status(Short.valueOf((short)1).equals(r.get(DSL.field("status", Short.class))) ? "ACTIVE" : "INACTIVE")
                 .lastLoginAt(r.get(DSL.field("last_login_at", LocalDateTime.class)))
                 .createdAt(r.get(DSL.field("created_at", LocalDateTime.class)))
                 .permissions(permissions)

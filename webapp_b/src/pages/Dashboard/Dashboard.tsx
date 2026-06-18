@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  listCustomers, listReportTasks, listAllDocuments, getMembership,
-  ApiCustomer, ApiReportTask, ApiMembership,
+  getDashboardStats,
+  ApiCustomer, ApiReportTask,
 } from '../../utils/api'
 import './Dashboard.css'
 
@@ -92,7 +92,9 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<ApiReportTask[]>([])
   const [taskTotal, setTaskTotal] = useState(0)
   const [aiPending, setAiPending] = useState(0)
-  const [membership, setMembership] = useState<ApiMembership | null>(null)
+  const [reportQuota, setReportQuota] = useState(-1)
+  const [reportUsed, setReportUsed] = useState(0)
+  const [docGapCount, setDocGapCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
 
@@ -100,17 +102,14 @@ export default function Dashboard() {
     setLoading(true)
     setErr('')
     try {
-      const [customerRes, taskRes, docRes, mem] = await Promise.all([
-        listCustomers({ pageSize: 6 }),
-        listReportTasks({ pageSize: 3 }),
-        listAllDocuments({ aiParseStatus: 'PENDING', pageSize: 1 }),
-        getMembership().catch(() => null as ApiMembership | null),
-      ])
-      setCustomers(customerRes.items)
-      setTasks(taskRes.items)
-      setTaskTotal(taskRes.total)
-      setAiPending(docRes.total)
-      setMembership(mem)
+      const stats = await getDashboardStats()
+      setCustomers(stats.todayCustomers)
+      setTasks(stats.recentTasks)
+      setTaskTotal(stats.taskTotal)
+      setAiPending(stats.aiPending)
+      setDocGapCount(stats.docGapCount)
+      setReportQuota(stats.reportQuota)
+      setReportUsed(stats.reportUsed)
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : '加载失败')
     } finally {
@@ -120,16 +119,13 @@ export default function Dashboard() {
 
   useEffect(() => { load() }, [load])
 
-  const docGapCount = customers.filter(c => c.docCompleteness < 80).length
-  const remainingQuota = membership
-    ? (membership.reportQuota === -1 ? '∞' : membership.reportQuota - membership.reportUsed)
-    : '—'
+  const remainingQuota = reportQuota === -1 ? '∞' : reportQuota - reportUsed
 
   const metrics = [
-    { label: '资料缺口客户',   value: docGapCount,     unit: '个', color: '#dc2626', bg: '#fef2f2', desc: '需要补充材料' },
-    { label: '今日待处理作业', value: taskTotal,        unit: '条', color: '#d97706', bg: '#fffbeb', desc: '填表 / 复核 / 导出' },
-    { label: 'AI审查待处理',   value: aiPending,        unit: '项', color: '#2563eb', bg: '#eff6ff', desc: '等待顾问确认' },
-    { label: '剩余调用次数',   value: remainingQuota,   unit: typeof remainingQuota === 'number' ? '次' : '', color: '#16a34a', bg: '#f0fdf4', desc: '机构版额度' },
+    { label: '资料缺口客户',   value: docGapCount,      unit: '个', color: '#dc2626', bg: '#fef2f2', desc: '需要补充材料' },
+    { label: '今日待处理作业', value: taskTotal,         unit: '条', color: '#d97706', bg: '#fffbeb', desc: '填表 / 复核 / 导出' },
+    { label: 'AI审查待处理',   value: aiPending,         unit: '项', color: '#2563eb', bg: '#eff6ff', desc: '等待顾问确认' },
+    { label: '剩余调用次数',   value: remainingQuota,    unit: typeof remainingQuota === 'number' ? '次' : '', color: '#16a34a', bg: '#f0fdf4', desc: '机构版额度' },
   ]
 
   // Derive todos from customer riskNotes
