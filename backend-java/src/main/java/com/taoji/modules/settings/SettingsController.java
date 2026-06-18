@@ -1,6 +1,7 @@
 package com.taoji.modules.settings;
 
 import com.taoji.common.ApiResponse;
+import com.taoji.common.PaginatedResult;
 import com.taoji.modules.settings.SettingsService.CreateAiRuleRequest;
 import com.taoji.modules.settings.SettingsService.UpdateAiRuleRequest;
 import com.taoji.modules.settings.SettingsService.UpdatePromptRequest;
@@ -8,9 +9,12 @@ import com.taoji.security.CurrentUser;
 import com.taoji.security.JwtUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -73,5 +77,39 @@ public class SettingsController {
             @RequestBody UpdatePromptRequest req) {
         return ApiResponse.ok(settingsService.updatePromptConfig(
                 currentUser, id, req.prompt(), req.model()));
+    }
+
+    // ─── Usage Logs (调用记录) ────────────────────────────────────────────────
+
+    @GetMapping("/usage-logs")
+    @Operation(summary = "获取调用记录列表（分页）")
+    public ApiResponse<PaginatedResult<Map<String, Object>>> listUsageLogs(
+            @CurrentUser JwtUserDetails currentUser,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.ok(settingsService.listUsageLogs(currentUser, type, keyword, page, pageSize));
+    }
+
+    @GetMapping("/usage-summary")
+    @Operation(summary = "获取本月调用汇总及员工用量")
+    public ApiResponse<Map<String, Object>> getUsageSummary(
+            @CurrentUser JwtUserDetails currentUser) {
+        return ApiResponse.ok(settingsService.getUsageSummary(currentUser));
+    }
+
+    @GetMapping("/usage-logs/export")
+    @Operation(summary = "导出调用记录 CSV")
+    public void exportUsageLogs(
+            @CurrentUser JwtUserDetails currentUser,
+            HttpServletResponse response) throws IOException {
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"usage-logs.csv\"");
+        // UTF-8 BOM for Excel compatibility
+        response.getOutputStream().write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
+        settingsService.exportUsageLogs(currentUser,
+                new java.io.PrintWriter(new java.io.OutputStreamWriter(
+                        response.getOutputStream(), StandardCharsets.UTF_8)));
     }
 }
