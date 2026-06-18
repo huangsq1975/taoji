@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -206,7 +205,7 @@ public class SettingsService {
                 .where(where)
                 .fetchOneInto(Long.class);
 
-        List<Record> rows = dsl.select(
+        var rows = dsl.select(
                         DSL.field("cr.id"),
                         DSL.field("cr.created_at"),
                         DSL.field("cr.call_type"),
@@ -270,7 +269,7 @@ public class SettingsService {
                 : "每月1日";
 
         // 员工用量（本月，按 user_id 聚合）
-        List<Record> empRows = dsl.select(
+        var empRows = dsl.select(
                         DSL.field("u.id").as("uid"),
                         DSL.coalesce(DSL.field("u.name"), DSL.field("u.phone")).as("name"),
                         DSL.sum(DSL.field("cr.quota_cost", Integer.class)).as("count")
@@ -313,7 +312,7 @@ public class SettingsService {
     public void exportUsageLogs(JwtUserDetails currentUser, PrintWriter writer) {
         Condition where = DSL.field("cr.institution_id").eq(currentUser.getInstitutionId());
 
-        List<Record> rows = dsl.select(
+        var rows = dsl.select(
                         DSL.field("cr.id"),
                         DSL.field("cr.created_at"),
                         DSL.field("cr.call_type"),
