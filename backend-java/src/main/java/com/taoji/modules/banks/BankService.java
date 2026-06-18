@@ -95,7 +95,7 @@ public class BankService {
                 .fetch()
                 .stream()
                 .map(r -> {
-                    Integer productId = r.get(DSL.field("bp.id", Integer.class));
+                    Integer productId = r.get(DSL.field("id", Integer.class));
                     List<Map<String, Object>> configs = loadMaterialConfigs(productId);
                     return mapToProductResponse(r, configs);
                 })
