@@ -44,7 +44,7 @@ public class DashboardService {
                 .join(DSL.table("customers").as("c"))
                 .on(DSL.field("d.customer_id").eq(DSL.field("c.id")))
                 .where(DSL.field("c.institution_id").eq(institutionId))
-                .and(DSL.field("d.ai_parse_status").eq("PENDING"))
+                .and(DSL.field("d.ai_parse_status::text").eq("PENDING"))
                 .fetchOneInto(Integer.class);
 
         // 4. 机构配额
