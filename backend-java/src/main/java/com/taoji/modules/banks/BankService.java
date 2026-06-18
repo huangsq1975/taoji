@@ -21,6 +21,7 @@ import org.jooq.impl.DSL;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -376,8 +377,8 @@ public class BankService {
                 .contactPerson(r.get(DSL.field("contact_person", String.class)))
                 .contactPhone(r.get(DSL.field("contact_phone", String.class)))
                 .notes(r.get(DSL.field("notes", String.class)))
-                .createdAt(r.get(DSL.field("created_at", LocalDateTime.class)))
-                .updatedAt(r.get(DSL.field("updated_at", LocalDateTime.class)))
+                .createdAt(ldt(r, "created_at"))
+                .updatedAt(ldt(r, "updated_at"))
                 .build();
     }
 
@@ -397,8 +398,8 @@ public class BankService {
                 .requirements(r.get(DSL.field("bp.requirements", String.class)))
                 .sortOrder(r.get(DSL.field("bp.sort_order", Integer.class)))
                 .status(r.get(DSL.field("bp.status", Short.class)).intValue())
-                .createdAt(r.get(DSL.field("bp.created_at", LocalDateTime.class)))
-                .updatedAt(r.get(DSL.field("bp.updated_at", LocalDateTime.class)))
+                .createdAt(ldt(r, "bp.created_at"))
+                .updatedAt(ldt(r, "bp.updated_at"))
                 .materialConfigs(configs)
                 .build();
     }
@@ -426,6 +427,15 @@ public class BankService {
                 .source(r.get(DSL.field("source", String.class)))
                 .note(r.get(DSL.field("note", String.class)))
                 .build();
+    }
+
+    /** Safely converts Timestamp or LocalDateTime from a jOOQ Record field. */
+    private LocalDateTime ldt(Record r, String fieldName) {
+        Object val = r.get(DSL.field(fieldName));
+        if (val == null) return null;
+        if (val instanceof LocalDateTime ldt) return ldt;
+        if (val instanceof Timestamp ts) return ts.toLocalDateTime();
+        return null;
     }
 
     private TemplateResponse mapToTemplateResponse(Record r) {
