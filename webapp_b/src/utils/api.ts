@@ -289,8 +289,11 @@ export function reviewField(id: number | string, body: ReviewFieldBody) {
   return api.post<ApiFieldDraft>(`/reports/${id}/review`, body)
 }
 
-export function exportReport(id: number | string) {
-  return api.post<ApiReportTask>(`/reports/${id}/export`, {})
+export function exportReport(
+  id: number | string,
+  body: { docIds?: number[]; includeForm?: boolean } = {},
+) {
+  return api.post<ApiReportTask>(`/reports/${id}/export`, body)
 }
 
 export function createReportTask(body: { customerId: number; productId: number }) {
@@ -303,6 +306,10 @@ export interface ApiBank {
   name: string
   shortName: string
   sortOrder: number
+  contactPerson?: string | null
+  contactPhone?: string | null
+  notes?: string | null
+  updatedAt?: string | null
 }
 
 export interface ApiProduct {
@@ -311,13 +318,285 @@ export interface ApiProduct {
   bankName: string
   name: string
   productType: string
+  loanAmount?: string | null
+  loanTerm?: string | null
+  updatedAt?: string | null
+}
+
+export interface ApiMaterialItem {
+  id: number
+  productId: number
+  name: string
+  required: boolean
+  source: string
+  format: string
+  note: string | null
+  category: string
+  sortOrder: number
+}
+
+export interface ApiFieldMapping {
+  id: number
+  productId: number
+  sysField: string
+  bankField: string
+  source: string
+  note: string | null
+}
+
+export interface ApiTemplate {
+  id: number
+  productId: number
+  name: string
+  keyFields: string
+  note: string | null
+  fileUrl: string | null
 }
 
 export function listBanks() {
   return api.get<ApiBank[]>('/banks')
 }
 
+export function getBank(id: number | string) {
+  return api.get<ApiBank>(`/banks/${id}`)
+}
+
+export function createBank(body: {
+  name: string
+  shortName?: string
+  contactPerson?: string
+  contactPhone?: string
+  notes?: string
+}) {
+  return api.post<ApiBank>('/banks', body)
+}
+
 export function listBankProducts(bankId?: number) {
   const qs = bankId ? `?bankId=${bankId}` : ''
   return api.get<ApiProduct[]>(`/banks/products${qs}`)
+}
+
+export function createProduct(bankId: number | string, body: {
+  name: string
+  productType?: string
+  loanAmount?: string
+  loanTerm?: string
+}) {
+  return api.post<ApiProduct>(`/banks/${bankId}/products`, body)
+}
+
+export function getProductMaterials(productId: number | string) {
+  return api.get<ApiMaterialItem[]>(`/banks/products/${productId}/materials`)
+}
+
+export function createMaterialItem(productId: number | string, body: {
+  name: string
+  required: boolean
+  source: string
+  format: string
+  note?: string
+  category: string
+}) {
+  return api.post<ApiMaterialItem>(`/banks/products/${productId}/materials`, body)
+}
+
+export function deleteMaterialItem(id: number) {
+  return api.delete<void>(`/banks/materials/${id}`)
+}
+
+export function getProductFieldMappings(productId: number | string) {
+  return api.get<ApiFieldMapping[]>(`/banks/products/${productId}/field-mappings`)
+}
+
+export function createFieldMapping(productId: number | string, body: {
+  sysField: string
+  bankField: string
+  source: string
+  note?: string
+}) {
+  return api.post<ApiFieldMapping>(`/banks/products/${productId}/field-mappings`, body)
+}
+
+export function deleteFieldMapping(id: number) {
+  return api.delete<void>(`/banks/field-mappings/${id}`)
+}
+
+export function getProductTemplates(productId: number | string) {
+  return api.get<ApiTemplate[]>(`/banks/products/${productId}/templates`)
+}
+
+export function createTemplate(productId: number | string, body: {
+  name: string
+  keyFields: string
+  note?: string
+}) {
+  return api.post<ApiTemplate>(`/banks/products/${productId}/templates`, body)
+}
+
+export function deleteTemplate(id: number) {
+  return api.delete<void>(`/banks/templates/${id}`)
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+// AI Rules
+export interface ApiAiRule {
+  id: number
+  name: string
+  fields: string
+  trigger: string
+  priority: 'HIGH' | 'MEDIUM' | 'LOW'
+  status: 'ENABLED' | 'DISABLED'
+  description: string | null
+}
+
+export function listAiRules() {
+  return api.get<ApiAiRule[]>('/settings/ai-rules')
+}
+
+export function createAiRule(body: {
+  name: string
+  fields: string
+  trigger: string
+  priority: string
+  description?: string
+}) {
+  return api.post<ApiAiRule>('/settings/ai-rules', body)
+}
+
+export function updateAiRule(id: number, body: Partial<{
+  name: string; fields: string; trigger: string; priority: string; description: string
+}>) {
+  return api.put<ApiAiRule>(`/settings/ai-rules/${id}`, body)
+}
+
+export function toggleAiRule(id: number) {
+  return api.post<ApiAiRule>(`/settings/ai-rules/${id}/toggle`, {})
+}
+
+// Prompt configs
+export interface ApiPromptConfig {
+  id: number
+  type: string
+  icon: string
+  model: string
+  prompt: string
+  status: 'ENABLED' | 'DISABLED'
+  updatedAt: string
+}
+
+export function listPromptConfigs() {
+  return api.get<ApiPromptConfig[]>('/settings/prompts')
+}
+
+export function updatePromptConfig(id: number, body: { prompt: string; model?: string }) {
+  return api.put<ApiPromptConfig>(`/settings/prompts/${id}`, body)
+}
+
+// Membership
+export interface ApiMembership {
+  planName: string
+  planCode: string
+  expiresAt: string | null
+  reportQuota: number
+  reportUsed: number
+  packageQuota: number
+  packageUsed: number
+  apiQuota: number
+  apiUsed: number
+  employeeQuota: number
+  employeeCount: number
+}
+
+export function getMembership() {
+  return api.get<ApiMembership>('/settings/membership')
+}
+
+// Org Accounts
+export interface ApiOrgAccount {
+  id: number
+  name: string
+  phone: string
+  role: string
+  dataScope: string
+  status: 'ACTIVE' | 'INACTIVE'
+  lastLoginAt: string | null
+  permissions: string[]
+}
+
+export function listOrgAccounts() {
+  return api.get<ApiOrgAccount[]>('/settings/accounts')
+}
+
+export function createOrgAccount(body: {
+  name: string
+  phone: string
+  role: string
+  dataScope: string
+}) {
+  return api.post<ApiOrgAccount>('/settings/accounts', body)
+}
+
+export function toggleOrgAccount(id: number) {
+  return api.post<ApiOrgAccount>(`/settings/accounts/${id}/toggle`, {})
+}
+
+export function updateOrgAccountPermissions(id: number, permissions: string[]) {
+  return api.put<ApiOrgAccount>(`/settings/accounts/${id}/permissions`, { permissions })
+}
+
+// Usage Logs
+export interface ApiUsageLog {
+  id: number
+  createdAt: string
+  type: string
+  target: string
+  userName: string
+  cost: number
+  status: string
+}
+
+export interface ApiUsageSummary {
+  totalThisMonth: number
+  reportCount: number
+  packageCount: number
+  apiCount: number
+  resetDate: string
+  byEmployee: { name: string; count: number; quota: number }[]
+}
+
+export function listUsageLogs(params: {
+  type?: string
+  keyword?: string
+  page?: number
+  pageSize?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params.type) qs.set('type', params.type)
+  if (params.keyword) qs.set('keyword', params.keyword)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const q = qs.toString()
+  return api.get<PaginatedResult<ApiUsageLog>>(`/settings/usage-logs${q ? '?' + q : ''}`)
+}
+
+export function getUsageSummary() {
+  return api.get<ApiUsageSummary>('/settings/usage-summary')
+}
+
+// API Config
+export interface ApiApiConfig {
+  apiKeyMasked: string
+  status: string
+  createdAt: string
+  monthlyUsage: number
+  monthlyQuota: number
+}
+
+export function getApiConfig() {
+  return api.get<ApiApiConfig>('/settings/api-config')
+}
+
+export function regenerateApiKey() {
+  return api.post<ApiApiConfig & { apiKeyFull: string }>('/settings/api-config/regenerate-key', {})
 }

@@ -1,12 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getReportTask, getReportFields, reviewField, exportReport, listDocuments, ApiReportTask, ApiFieldDraft, ApiDocument, ReviewFieldBody } from '../../utils/api'
+import {
+  getReportTask, getReportFields, reviewField, exportReport,
+  listDocuments, ApiReportTask, ApiFieldDraft, ApiDocument, ReviewFieldBody,
+} from '../../utils/api'
 import './ReportDetail.css'
 
 const DOC_TYPE_LABEL: Record<string, string> = {
-  BUSINESS_LICENSE: '营业执照', BANK_STATEMENT: '银行流水', CREDIT_REPORT: '征信报告',
-  TAX_INVOICE: '税票', PROPERTY_CERT: '不动产证', ID_CARD: '身份证',
-  FINANCIAL_STATEMENT: '财务报表', OTHER: '其他材料',
+  BUSINESS_LICENSE:   '营业执照',
+  BANK_STATEMENT:     '银行流水',
+  CREDIT_REPORT:      '征信报告',
+  TAX_INVOICE:        '税票',
+  PROPERTY_CERT:      '不动产证',
+  ID_CARD:            '身份证',
+  FINANCIAL_STATEMENT:'财务报表',
+  OTHER:              '其他材料',
 }
 
 const DOC_PARSE_STYLE: Record<string, { bg: string; text: string; label: string }> = {
@@ -41,6 +49,24 @@ const REVIEW_STATUS_MAP: Record<string, { label: string; cls: string }> = {
   rejected:  { label: '已拒绝', cls: 'badge-error' },
 }
 
+const DOC_TYPE_ORDER = [
+  'BUSINESS_LICENSE','ID_CARD','CREDIT_REPORT','BANK_STATEMENT',
+  'TAX_INVOICE','FINANCIAL_STATEMENT','PROPERTY_CERT','OTHER',
+]
+
+function formatFileSize(b: number): string {
+  if (b < 1024) return `${b} B`
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+  return `${(b / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatUploadDate(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  } catch { return '—' }
+}
+
 function StatusBadge({ status }: { status: string }) {
   const c = STATUS_MAP[status] || { label: status, bg: '#f8fafc', text: '#64748b' }
   return <span className="badge" style={{ background: c.bg, color: c.text }}>{c.label}</span>
@@ -49,6 +75,8 @@ function StatusBadge({ status }: { status: string }) {
 function Spinner() {
   return <div className="spinner-wrap"><div className="spinner" /></div>
 }
+
+// ─── 修正字段弹窗 ─────────────────────────────────────────────────────────────
 
 interface CorrectModalProps {
   field: ApiFieldDraft
@@ -110,7 +138,238 @@ function CorrectModal({ field, taskId, onDone, onClose }: CorrectModalProps) {
   )
 }
 
-const TABS = ['复核总览', '字段明细', '材料目录']
+// ─── 导出材料包弹窗 ───────────────────────────────────────────────────────────
+
+interface ExportModalProps {
+  task: ApiReportTask
+  reviewDone: boolean
+  onClose: () => void
+  onExported: (task: ApiReportTask) => void
+}
+
+function ExportModal({ task, reviewDone, onClose, onExported }: ExportModalProps) {
+  const [docs, setDocs] = useState<ApiDocument[]>([])
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [includeForm, setIncludeForm] = useState(true)
+  const [loadingDocs, setLoadingDocs] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [exportUrl, setExportUrl] = useState<string | null>(task.export_url)
+  const [err, setErr] = useState('')
+  const pollRef = useRef(true)
+
+  useEffect(() => {
+    pollRef.current = true
+    listDocuments(task.customer_id)
+      .then(d => {
+        setDocs(d)
+        setSelected(new Set(d.map(doc => doc.id)))
+      })
+      .catch(e => setErr(e instanceof Error ? e.message : '加载材料列表失败'))
+      .finally(() => setLoadingDocs(false))
+    return () => { pollRef.current = false }
+  }, [task.customer_id])
+
+  const groups = docs.reduce<Record<string, ApiDocument[]>>((acc, d) => {
+    const key = d.docType
+    if (!acc[key]) acc[key] = []
+    acc[key].push(d)
+    return acc
+  }, {})
+  const sortedTypes = [
+    ...DOC_TYPE_ORDER.filter(t => groups[t]),
+    ...Object.keys(groups).filter(t => !DOC_TYPE_ORDER.includes(t)),
+  ]
+
+  function toggleDoc(id: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    setErr('')
+    try {
+      const updated = await exportReport(task.id, {
+        docIds: [...selected],
+        includeForm,
+      })
+      onExported(updated)
+      if (updated.export_url) {
+        setExportUrl(updated.export_url)
+        window.open(updated.export_url, '_blank')
+        setExporting(false)
+      } else {
+        // Poll until export_url is populated (async backend)
+        await pollExportUrl(task.id)
+      }
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : '导出失败')
+      setExporting(false)
+    }
+  }
+
+  async function pollExportUrl(id: number) {
+    for (let i = 0; i < 30 && pollRef.current; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      try {
+        const t = await getReportTask(String(id))
+        if (t.export_url) {
+          setExportUrl(t.export_url)
+          onExported(t)
+          window.open(t.export_url, '_blank')
+          setExporting(false)
+          return
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+    }
+    if (pollRef.current) {
+      setErr('导出超时，请稍后刷新页面重试')
+      setExporting(false)
+    }
+  }
+
+  const allSelected = docs.length > 0 && selected.size === docs.length
+  const totalSize = docs.filter(d => selected.has(d.id) && d.fileSize != null)
+    .reduce((s, d) => s + (d.fileSize ?? 0), 0)
+
+  return (
+    <div className="modal-mask" onClick={exporting ? undefined : onClose}>
+      <div className="modal-box modal-box-export" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">导出材料包</span>
+          {!exporting && <button className="modal-close" onClick={onClose}>✕</button>}
+        </div>
+        <div className="modal-body">
+
+          {/* Summary */}
+          <div className="export-summary">
+            <div className="export-summary-row">
+              <span className="export-summary-label">客户</span>
+              <span className="export-summary-value">{task.customer_name}</span>
+            </div>
+            <div className="export-summary-row">
+              <span className="export-summary-label">产品</span>
+              <span className="export-summary-value">{task.bank_short_name} · {task.product_name}</span>
+            </div>
+            <div className="export-summary-row">
+              <span className="export-summary-label">格式</span>
+              <span className="export-summary-value">ZIP 压缩包</span>
+            </div>
+          </div>
+
+          {/* Include form option */}
+          <label className="export-option-row">
+            <input type="checkbox" checked={includeForm} onChange={e => setIncludeForm(e.target.checked)} />
+            <span>包含AI填表内容（字段明细 CSV）</span>
+            {!reviewDone && (
+              <span className="export-warn-tag">未完成复核</span>
+            )}
+          </label>
+
+          {/* Document checklist */}
+          <div className="export-section-title">
+            选择材料文件
+            {totalSize > 0 && (
+              <span className="export-size-hint">共 {formatFileSize(totalSize)}</span>
+            )}
+          </div>
+
+          {loadingDocs ? (
+            <div style={{ padding: '16px 0' }}><Spinner /></div>
+          ) : docs.length === 0 ? (
+            <div className="export-empty">暂无上传材料，仅导出AI填表内容</div>
+          ) : (
+            <div className="export-doc-list">
+              <label className="export-select-all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={e => setSelected(e.target.checked ? new Set(docs.map(d => d.id)) : new Set())}
+                />
+                全选（{docs.length} 份文件）
+              </label>
+              {sortedTypes.map(type => (
+                <div key={type} className="export-doc-group">
+                  <div className="export-doc-group-title">
+                    {DOC_TYPE_LABEL[type] ?? type}
+                    <span className="export-doc-group-count">{groups[type].length} 份</span>
+                  </div>
+                  {groups[type].map(doc => (
+                    <label key={doc.id} className="export-doc-item">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(doc.id)}
+                        onChange={() => toggleDoc(doc.id)}
+                      />
+                      <span className="export-doc-name">{doc.fileName}</span>
+                      {doc.fileSize != null && (
+                        <span className="export-doc-size">{formatFileSize(doc.fileSize)}</span>
+                      )}
+                      <span className={`badge export-doc-parse-badge ${DOC_PARSE_STYLE[doc.aiParseStatus]?.bg ? '' : ''}`}
+                        style={{
+                          background: DOC_PARSE_STYLE[doc.aiParseStatus]?.bg ?? '#f8fafc',
+                          color: DOC_PARSE_STYLE[doc.aiParseStatus]?.text ?? '#64748b',
+                          fontSize: 10, padding: '1px 6px',
+                        }}>
+                        {DOC_PARSE_STYLE[doc.aiParseStatus]?.label ?? doc.aiParseStatus}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Progress / done */}
+          {exporting && (
+            <div className="export-progress-row">
+              <div className="export-inline-spinner" />
+              <span>正在生成材料包，请稍候...</span>
+            </div>
+          )}
+
+          {exportUrl && !exporting && (
+            <div className="export-done-row">
+              <span className="export-done-icon">✓</span>
+              <span className="export-done-text">导出完成</span>
+              <a className="btn btn-primary" href={exportUrl} target="_blank" rel="noreferrer"
+                style={{ textDecoration: 'none', fontSize: 13, padding: '6px 16px' }}>
+                下载 ZIP
+              </a>
+            </div>
+          )}
+
+          {err && <div className="form-error" style={{ marginTop: 8 }}>{err}</div>}
+        </div>
+
+        <div className="modal-footer">
+          {!exporting && !exportUrl && (
+            <>
+              <button className="btn btn-outline" onClick={onClose}>取消</button>
+              <button
+                className="btn btn-export-big"
+                style={{ fontSize: 13, padding: '8px 20px' }}
+                disabled={selected.size === 0 && !includeForm}
+                onClick={handleExport}
+              >
+                开始导出（{selected.size} 份文件{includeForm ? ' + 表格' : ''}）
+              </button>
+            </>
+          )}
+          {exportUrl && !exporting && (
+            <button className="btn btn-outline" onClick={onClose}>关闭</button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Tab 2: 材料目录 ──────────────────────────────────────────────────────────
 
@@ -120,24 +379,25 @@ function MaterialsTab({ customerId, customerName }: { customerId: number; custom
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const reload = useCallback(() => {
+    setLoading(true)
+    setError('')
     listDocuments(customerId)
-      .then(d => { setDocs(d); setLoading(false) })
-      .catch(e => { setError(e instanceof Error ? e.message : '加载失败'); setLoading(false) })
+      .then(d => setDocs(d))
+      .catch(e => setError(e instanceof Error ? e.message : '加载失败'))
+      .finally(() => setLoading(false))
   }, [customerId])
+
+  useEffect(() => { reload() }, [reload])
 
   if (loading) return <Spinner />
   if (error) return (
     <div className="error-box" style={{ marginTop: 8 }}>
       ⚠ {error}
-      <button className="btn btn-outline" style={{ marginLeft: 12 }}
-        onClick={() => { setLoading(true); setError(''); listDocuments(customerId).then(d => setDocs(d)).catch(e => setError(e instanceof Error ? e.message : '加载失败')).finally(() => setLoading(false)) }}>
-        重试
-      </button>
+      <button className="btn btn-outline" style={{ marginLeft: 12 }} onClick={reload}>重试</button>
     </div>
   )
 
-  // Group by docType
   const groups = docs.reduce<Record<string, ApiDocument[]>>((acc, d) => {
     const key = d.docType
     if (!acc[key]) acc[key] = []
@@ -145,8 +405,10 @@ function MaterialsTab({ customerId, customerName }: { customerId: number; custom
     return acc
   }, {})
 
-  const typeOrder = ['BUSINESS_LICENSE', 'ID_CARD', 'CREDIT_REPORT', 'BANK_STATEMENT', 'TAX_INVOICE', 'FINANCIAL_STATEMENT', 'PROPERTY_CERT', 'OTHER']
-  const sortedTypes = [...typeOrder.filter(t => groups[t]), ...Object.keys(groups).filter(t => !typeOrder.includes(t))]
+  const sortedTypes = [
+    ...DOC_TYPE_ORDER.filter(t => groups[t]),
+    ...Object.keys(groups).filter(t => !DOC_TYPE_ORDER.includes(t)),
+  ]
 
   return (
     <div className="tab-content">
@@ -155,7 +417,7 @@ function MaterialsTab({ customerId, customerName }: { customerId: number; custom
           共 <strong>{docs.length}</strong> 份材料 · {Object.keys(groups).length} 种类型
         </div>
         <button className="btn btn-outline" onClick={() => navigate(`/customers/${customerId}?tab=1`)}>
-          📎 前往上传材料
+          前往上传材料
         </button>
       </div>
 
@@ -218,18 +480,9 @@ function MaterialsTab({ customerId, customerName }: { customerId: number; custom
   )
 }
 
-function formatFileSize(b: number): string {
-  if (b < 1024) return `${b} B`
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
-  return `${(b / 1024 / 1024).toFixed(1)} MB`
-}
+// ─── 主页面 ───────────────────────────────────────────────────────────────────
 
-function formatUploadDate(iso: string): string {
-  try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-  } catch { return '—' }
-}
+const TABS = ['复核总览', '字段明细', '材料目录']
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>()
@@ -240,7 +493,7 @@ export default function ReportDetail() {
   const [err, setErr] = useState('')
   const [activeTab, setActiveTab] = useState(0)
   const [correctField, setCorrectField] = useState<ApiFieldDraft | null>(null)
-  const [exporting, setExporting] = useState(false)
+  const [showExport, setShowExport] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -274,22 +527,6 @@ export default function ReportDetail() {
     setCorrectField(null)
   }
 
-  async function handleExport() {
-    if (!id || !task) return
-    setExporting(true)
-    try {
-      const updated = await exportReport(id)
-      setTask(updated)
-      if (updated.export_url) {
-        window.open(updated.export_url, '_blank')
-      }
-    } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '导出失败')
-    } finally {
-      setExporting(false)
-    }
-  }
-
   if (loading) return <div className="report-detail"><Spinner /></div>
   if (err || !task) return (
     <div className="report-detail">
@@ -301,7 +538,7 @@ export default function ReportDetail() {
   const approved = fields.filter(f => f.review_status === 'approved' || f.review_status === 'corrected').length
   const pending = fields.filter(f => f.review_status === 'pending').length
   const issues = fields.filter(f => f.ai_status === 'issue' || f.ai_status === 'missing').length
-  const canExport = task.status === 'REVIEW_DONE' || task.status === 'EXPORTED'
+  const reviewDone = task.status === 'REVIEW_DONE' || task.status === 'EXPORTED' || task.status === 'SUBMITTED'
 
   return (
     <div className="report-detail">
@@ -379,19 +616,22 @@ export default function ReportDetail() {
 
           <div className="review-actions">
             <button className="btn btn-outline" onClick={() => setActiveTab(1)}>查看字段明细</button>
-            <button
-              className="btn btn-export-big"
-              disabled={!canExport || exporting}
-              onClick={handleExport}
-            >
-              {exporting ? '导出中...' : '📦 导出材料包（ZIP）'}
+            <button className="btn btn-outline" onClick={() => setActiveTab(2)}>查看材料目录</button>
+            <button className="btn btn-export-big" onClick={() => setShowExport(true)}>
+              导出材料包
             </button>
           </div>
 
           {task.export_url && (
             <div className="export-link-row">
-              <span className="export-link-label">已导出文件：</span>
-              <a href={task.export_url} target="_blank" rel="noreferrer" className="export-link">{task.export_url}</a>
+              <span className="export-link-label">上次导出：</span>
+              <a href={task.export_url} target="_blank" rel="noreferrer" className="export-link">
+                {task.export_url}
+              </a>
+              <button className="btn-sm btn-view" style={{ marginLeft: 8 }}
+                onClick={() => setShowExport(true)}>
+                重新导出
+              </button>
             </div>
           )}
         </div>
@@ -451,7 +691,7 @@ export default function ReportDetail() {
       )}
 
       {/* Tab 2: 材料目录 */}
-      {activeTab === 2 && task && (
+      {activeTab === 2 && (
         <MaterialsTab customerId={task.customer_id} customerName={task.customer_name} />
       )}
 
@@ -463,12 +703,8 @@ export default function ReportDetail() {
           <span className="sep">·</span>
           <span className="text-red">{pending} 待审核</span>
         </div>
-        <button
-          className="btn btn-export-big"
-          disabled={!canExport || exporting}
-          onClick={handleExport}
-        >
-          {exporting ? '导出中...' : '📦 导出材料包（ZIP）'}
+        <button className="btn btn-export-big" onClick={() => setShowExport(true)}>
+          导出材料包
         </button>
       </div>
 
@@ -478,6 +714,15 @@ export default function ReportDetail() {
           taskId={id!}
           onDone={handleCorrected}
           onClose={() => setCorrectField(null)}
+        />
+      )}
+
+      {showExport && (
+        <ExportModal
+          task={task}
+          reviewDone={reviewDone}
+          onClose={() => setShowExport(false)}
+          onExported={updated => setTask(updated)}
         />
       )}
     </div>
