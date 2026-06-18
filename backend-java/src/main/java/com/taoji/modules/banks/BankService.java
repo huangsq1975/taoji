@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -76,47 +77,53 @@ public class BankService {
     public List<ProductResponse> listProducts(Integer bankId, String productType) {
         Condition condition = DSL.trueCondition();
         if (bankId != null) {
-            condition = condition.and(DSL.field("bp.bank_id").eq(bankId));
+            condition = condition.and(DSL.field("bank_id").eq(bankId));
         }
         if (productType != null && !productType.isBlank()) {
-            condition = condition.and(DSL.field("bp.product_type").eq(productType));
+            condition = condition.and(DSL.field("product_type").eq(productType));
         }
-        condition = condition.and(DSL.field("bp.status").eq((short) 1));
+        condition = condition.and(DSL.field("status").eq((short) 1));
 
-        return dsl.select(
-                        DSL.field("bp.*"),
-                        DSL.field("b.name").as("bank_name")
-                )
-                .from(DSL.table("bank_products").as("bp"))
-                .join(DSL.table("banks").as("b"))
-                .on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
+        List<Map<String, Object>> rows = dsl.select()
+                .from(DSL.table("bank_products"))
                 .where(condition)
-                .orderBy(DSL.field("b.sort_order"), DSL.field("bp.sort_order"))
-                .fetchMaps()
-                .stream()
-                .map(m -> {
-                    Integer productId = ((Number) m.get("id")).intValue();
-                    List<Map<String, Object>> configs = loadMaterialConfigs(productId);
-                    return mapToProductResponseFromMap(m, configs);
-                })
-                .toList();
+                .orderBy(DSL.field("sort_order").asc())
+                .fetchMaps();
+
+        if (rows.isEmpty()) return List.of();
+
+        // Fetch bank names in one query
+        Set<Integer> bankIds = rows.stream()
+                .map(m -> ((Number) m.get("bank_id")).intValue())
+                .collect(java.util.stream.Collectors.toSet());
+        Map<Integer, String> bankNameMap = dsl.select(DSL.field("id"), DSL.field("name"))
+                .from(DSL.table("banks"))
+                .where(DSL.field("id").in(bankIds))
+                .fetchMap(DSL.field("id", Integer.class), DSL.field("name", String.class));
+
+        return rows.stream().map(m -> {
+            Integer productId = ((Number) m.get("id")).intValue();
+            m.put("bank_name", bankNameMap.get(((Number) m.get("bank_id")).intValue()));
+            return mapToProductResponseFromMap(m, loadMaterialConfigs(productId));
+        }).toList();
     }
 
     public ProductResponse getProduct(Integer productId) {
-        Map<String, Object> m = dsl.select(
-                        DSL.field("bp.*"),
-                        DSL.field("b.name").as("bank_name")
-                )
-                .from(DSL.table("bank_products").as("bp"))
-                .join(DSL.table("banks").as("b"))
-                .on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
-                .where(DSL.field("bp.id").eq(productId))
+        Map<String, Object> m = dsl.select()
+                .from(DSL.table("bank_products"))
+                .where(DSL.field("id").eq(productId))
                 .fetchOneMap();
 
         if (m == null) throw AppException.notFound("产品不存在");
 
-        List<Map<String, Object>> configs = loadMaterialConfigs(productId);
-        return mapToProductResponseFromMap(m, configs);
+        Integer bankId = ((Number) m.get("bank_id")).intValue();
+        String bankName = dsl.select(DSL.field("name"))
+                .from(DSL.table("banks"))
+                .where(DSL.field("id").eq(bankId))
+                .fetchOneInto(String.class);
+        m.put("bank_name", bankName);
+
+        return mapToProductResponseFromMap(m, loadMaterialConfigs(productId));
     }
 
     @Transactional
