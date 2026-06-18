@@ -19,10 +19,13 @@ public class ProductResponse {
     private BigDecimal loanMin;
     private BigDecimal loanMax;
     private BigDecimal rateMin;
+    private String loanAmount;
+    private String loanTerm;
     private String description;
     private String requirements;
     private Integer sortOrder;
     private Integer status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private List<Map<String, Object>> materialConfigs;
 }

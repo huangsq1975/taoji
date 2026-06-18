@@ -14,5 +14,9 @@ public class BankResponse {
     private String logoUrl;
     private Integer sortOrder;
     private Integer status;
+    private String contactPerson;
+    private String contactPhone;
+    private String notes;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
