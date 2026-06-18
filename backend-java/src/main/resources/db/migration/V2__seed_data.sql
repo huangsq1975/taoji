@@ -8,9 +8,9 @@ INSERT INTO membership_plans (name, monthly_quota, max_advisors, features, price
 -- Demo institution
 INSERT INTO institutions (name, plan_id, quota_total, quota_used, status) VALUES ('韬纪元演示机构', 2, 200, 0, 1);
 
--- Admin user (password: Admin123)
+-- Admin user (password: 123456)
 INSERT INTO users (institution_id, name, phone, password_hash, role, data_scope, status)
-VALUES (1, '系统管理员', '13800000000', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6HJKK', 'ADMIN', 'ALL', 1);
+VALUES (1, '系统管理员', '13800000000', '$2b$10$COh.LnT.oQBYbcnuwoAxA.2crHPqrLaCqxxiYr5TRdASDz4dUjLyC', 'ADMIN', 'ALL', 1);
 
 -- Advisor user (password: Advisor123)
 INSERT INTO users (institution_id, name, phone, password_hash, role, data_scope, status)

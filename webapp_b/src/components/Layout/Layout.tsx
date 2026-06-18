@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AiAssistant from '../AiAssistant/AiAssistant'
+import { getAuth, clearAuth, roleLabel } from '../../utils/auth'
 import './Layout.css'
 
 const navSections = [
@@ -55,9 +56,21 @@ function getBreadcrumb(pathname: string): string[] {
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const crumbs = getBreadcrumb(location.pathname)
   const [aiOpen, setAiOpen] = useState(false)
   const handlePanelChange = useCallback((open: boolean) => setAiOpen(open), [])
+
+  const user = getAuth()
+  const userName = user?.name ?? '未知用户'
+  const userAvatar = userName.slice(-1)
+  const userRoleLabel = user ? roleLabel(user.role) : ''
+  const institutionName = user?.institutionName ?? ''
+
+  function handleLogout() {
+    clearAuth()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="layout">
@@ -92,13 +105,13 @@ export default function Layout() {
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <div className="sidebar-avatar">张</div>
+            <div className="sidebar-avatar">{userAvatar}</div>
             <div className="sidebar-user-info">
-              <div className="sidebar-user-name">张主管</div>
-              <div className="sidebar-user-role">机构版 · 主管</div>
+              <div className="sidebar-user-name">{userName}</div>
+              <div className="sidebar-user-role">{institutionName} · {userRoleLabel}</div>
             </div>
           </div>
-          <button className="sidebar-logout">注销</button>
+          <button className="sidebar-logout" onClick={handleLogout}>注销</button>
         </div>
       </aside>
 
@@ -120,8 +133,8 @@ export default function Layout() {
               <span>3 待处理</span>
             </div>
             <div className="topbar-user">
-              <div className="topbar-avatar">张</div>
-              <span>张主管</span>
+              <div className="topbar-avatar">{userAvatar}</div>
+              <span>{userName}</span>
             </div>
           </div>
         </header>

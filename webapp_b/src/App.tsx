@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Customers from './pages/Customers/Customers'
 import CustomerDetail from './pages/CustomerDetail/CustomerDetail'
@@ -17,7 +19,15 @@ import ApiConfig from './pages/Settings/ApiConfig'
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="customers" element={<Customers />} />
@@ -33,6 +43,7 @@ export default function App() {
         <Route path="settings/accounts" element={<OrgAccounts />} />
         <Route path="settings/api" element={<ApiConfig />} />
       </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
