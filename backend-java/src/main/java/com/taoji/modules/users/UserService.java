@@ -268,9 +268,16 @@ public class UserService {
                 .role(r.get(DSL.field("role", String.class)))
                 .dataScope(r.get(DSL.field("data_scope", String.class)))
                 .status(Short.valueOf((short)1).equals(r.get(DSL.field("status", Short.class))) ? "ACTIVE" : "INACTIVE")
-                .lastLoginAt(r.get(DSL.field("last_login_at", LocalDateTime.class)))
-                .createdAt(r.get(DSL.field("created_at", LocalDateTime.class)))
+                .lastLoginAt(toLocalDateTime(r.get("last_login_at")))
+                .createdAt(toLocalDateTime(r.get("created_at")))
                 .permissions(permissions)
                 .build();
+    }
+
+    private static LocalDateTime toLocalDateTime(Object val) {
+        if (val == null) return null;
+        if (val instanceof LocalDateTime ldt) return ldt;
+        if (val instanceof java.sql.Timestamp ts) return ts.toLocalDateTime();
+        return null;
     }
 }
