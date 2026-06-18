@@ -44,7 +44,7 @@ public class DocumentService {
                                             String docType,
                                             MultipartFile file) {
         // Ensure customer belongs to institution
-        int exists = dsl.selectCount()
+        Integer exists = dsl.selectCount()
                 .from(DSL.table("customers"))
                 .where(DSL.field("id").eq(customerId))
                 .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))
@@ -119,7 +119,7 @@ public class DocumentService {
 
         // Verify customer belongs to institution
         Long customerId = doc.get(DSL.field("customer_id", Long.class));
-        int exists = dsl.selectCount()
+        Integer exists = dsl.selectCount()
                 .from(DSL.table("customers"))
                 .where(DSL.field("id").eq(customerId))
                 .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))
@@ -136,7 +136,7 @@ public class DocumentService {
 
     public Map<String, Object> getRecognitionSummary(JwtUserDetails currentUser, Long customerId) {
         // Verify access
-        int exists = dsl.selectCount()
+        Integer exists = dsl.selectCount()
                 .from(DSL.table("customers"))
                 .where(DSL.field("id").eq(customerId))
                 .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))

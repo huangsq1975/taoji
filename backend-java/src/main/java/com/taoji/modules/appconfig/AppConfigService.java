@@ -54,7 +54,7 @@ public class AppConfigService {
             throw AppException.forbidden("只有管理员可以修改平台配置");
         }
 
-        int exists = dsl.selectCount()
+        Integer exists = dsl.selectCount()
                 .from(DSL.table("platform_configs"))
                 .where(DSL.field("config_key").eq(key))
                 .fetchOneInto(Integer.class);

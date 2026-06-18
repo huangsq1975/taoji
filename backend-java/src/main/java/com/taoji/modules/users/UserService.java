@@ -38,7 +38,7 @@ public class UserService {
             );
         }
 
-        int total = dsl.selectCount()
+        Integer total = dsl.selectCount()
                 .from(DSL.table("users"))
                 .where(baseCondition)
                 .fetchOneInto(Integer.class);
@@ -207,7 +207,7 @@ public class UserService {
         int maxAdvisors = planRecord.get(DSL.field("mp.max_advisors", Integer.class));
         if (maxAdvisors == -1) return; // Unlimited
 
-        int currentCount = dsl.selectCount()
+        Integer currentCount = dsl.selectCount()
                 .from(DSL.table("users"))
                 .where(DSL.field("institution_id").eq(institutionId))
                 .and(DSL.field("deleted_at").isNull())

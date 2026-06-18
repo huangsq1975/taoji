@@ -49,7 +49,7 @@ public class ReportService {
         if (customerId != null) condition = condition.and(DSL.field("rt.customer_id").eq(customerId));
         if (status != null && !status.isBlank()) condition = condition.and(DSL.field("rt.status").eq(status));
 
-        int total = dsl.selectCount()
+        Integer total = dsl.selectCount()
                 .from(DSL.table("report_tasks").as("rt"))
                 .where(condition)
                 .fetchOneInto(Integer.class);
@@ -78,7 +78,7 @@ public class ReportService {
     @Transactional
     public Map<String, Object> createReportTask(JwtUserDetails currentUser, CreateReportTaskRequest request) {
         // Verify customer access
-        int custExists = dsl.selectCount()
+        Integer custExists = dsl.selectCount()
                 .from(DSL.table("customers"))
                 .where(DSL.field("id").eq(request.getCustomerId()))
                 .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))
@@ -157,7 +157,7 @@ public class ReportService {
                 .execute();
 
         // Count remaining issues
-        int issueCount = dsl.selectCount()
+        Integer issueCount = dsl.selectCount()
                 .from(DSL.table("report_field_drafts"))
                 .where(DSL.field("task_id").eq(taskId))
                 .and(DSL.field("review_status").eq("pending"))

@@ -45,7 +45,7 @@ public class ChatService {
                     .fetchOneInto(Long.class);
         } else {
             // Verify session exists
-            int exists = dsl.selectCount()
+            Integer exists = dsl.selectCount()
                     .from(DSL.table("chat_sessions"))
                     .where(DSL.field("id").eq(sessionId))
                     .fetchOneInto(Integer.class);
@@ -98,7 +98,7 @@ public class ChatService {
     }
 
     public List<Map<String, Object>> getSessionMessages(Long sessionId) {
-        int exists = dsl.selectCount()
+        Integer exists = dsl.selectCount()
                 .from(DSL.table("chat_sessions"))
                 .where(DSL.field("id").eq(sessionId))
                 .fetchOneInto(Integer.class);

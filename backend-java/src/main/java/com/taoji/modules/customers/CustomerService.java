@@ -43,12 +43,12 @@ public class CustomerService {
             condition = condition.and(DSL.field("c.status").eq(status));
         }
 
-        int total = dsl.selectCount()
+        Integer total = dsl.selectCount()
                 .from(DSL.table("customers").as("c"))
                 .where(condition)
                 .fetchOneInto(Integer.class);
 
-        List<Record> records = dsl.select(
+        var records = dsl.select(
                         DSL.field("c.*"),
                         DSL.field("u.name").as("advisor_name")
                 )
@@ -211,27 +211,27 @@ public class CustomerService {
         CustomerResponse customer = getCustomerById(currentUser, customerId);
 
         // Count documents
-        int docCount = dsl.selectCount()
+        Integer docCount = dsl.selectCount()
                 .from(DSL.table("customer_documents"))
                 .where(DSL.field("customer_id").eq(customerId))
                 .and(DSL.field("deleted_at").isNull())
                 .fetchOneInto(Integer.class);
 
         // Count follow-ups
-        int followUpCount = dsl.selectCount()
+        Integer followUpCount = dsl.selectCount()
                 .from(DSL.table("follow_up_records"))
                 .where(DSL.field("customer_id").eq(customerId))
                 .fetchOneInto(Integer.class);
 
         // Count authorizations
-        int authCount = dsl.selectCount()
+        Integer authCount = dsl.selectCount()
                 .from(DSL.table("customer_authorizations"))
                 .where(DSL.field("customer_id").eq(customerId))
                 .and(DSL.field("status").eq("signed"))
                 .fetchOneInto(Integer.class);
 
         // Count report tasks
-        int reportCount = dsl.selectCount()
+        Integer reportCount = dsl.selectCount()
                 .from(DSL.table("report_tasks"))
                 .where(DSL.field("customer_id").eq(customerId))
                 .fetchOneInto(Integer.class);
@@ -264,7 +264,7 @@ public class CustomerService {
         condition = condition.and(DSL.field("c.id").eq(customerId))
                 .and(DSL.field("c.deleted_at").isNull());
 
-        int count = dsl.selectCount()
+        Integer count = dsl.selectCount()
                 .from(DSL.table("customers").as("c"))
                 .where(condition)
                 .fetchOneInto(Integer.class);

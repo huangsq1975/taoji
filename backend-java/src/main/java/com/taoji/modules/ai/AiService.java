@@ -36,7 +36,7 @@ public class AiService {
     public Map<String, Object> triggerRecognition(JwtUserDetails currentUser,
                                                     TriggerRecognitionRequest request) {
         // Verify customer access
-        int custExists = dsl.selectCount()
+        Integer custExists = dsl.selectCount()
                 .from(DSL.table("customers"))
                 .where(DSL.field("id").eq(request.getCustomerId()))
                 .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))

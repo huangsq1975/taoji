@@ -6,6 +6,7 @@ import com.taoji.modules.banks.dto.CreateProductRequest;
 import com.taoji.modules.banks.dto.ProductResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
@@ -37,7 +38,7 @@ public class BankService {
     }
 
     public List<ProductResponse> listProducts(Integer bankId, String productType) {
-        var condition = DSL.trueCondition();
+        Condition condition = DSL.trueCondition();
         if (bankId != null) {
             condition = condition.and(DSL.field("bp.bank_id").eq(bankId));
         }
