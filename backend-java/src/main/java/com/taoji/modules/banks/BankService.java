@@ -92,18 +92,18 @@ public class BankService {
                 .on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
                 .where(condition)
                 .orderBy(DSL.field("b.sort_order"), DSL.field("bp.sort_order"))
-                .fetch()
+                .fetchMaps()
                 .stream()
-                .map(r -> {
-                    Integer productId = r.get(DSL.field("id", Integer.class));
+                .map(m -> {
+                    Integer productId = ((Number) m.get("id")).intValue();
                     List<Map<String, Object>> configs = loadMaterialConfigs(productId);
-                    return mapToProductResponse(r, configs);
+                    return mapToProductResponseFromMap(m, configs);
                 })
                 .toList();
     }
 
     public ProductResponse getProduct(Integer productId) {
-        Record r = dsl.select(
+        Map<String, Object> m = dsl.select(
                         DSL.field("bp.*"),
                         DSL.field("b.name").as("bank_name")
                 )
@@ -111,12 +111,12 @@ public class BankService {
                 .join(DSL.table("banks").as("b"))
                 .on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
                 .where(DSL.field("bp.id").eq(productId))
-                .fetchOne();
+                .fetchOneMap();
 
-        if (r == null) throw AppException.notFound("产品不存在");
+        if (m == null) throw AppException.notFound("产品不存在");
 
         List<Map<String, Object>> configs = loadMaterialConfigs(productId);
-        return mapToProductResponse(r, configs);
+        return mapToProductResponseFromMap(m, configs);
     }
 
     @Transactional
@@ -382,26 +382,33 @@ public class BankService {
                 .build();
     }
 
-    private ProductResponse mapToProductResponse(Record r, List<Map<String, Object>> configs) {
+    private ProductResponse mapToProductResponseFromMap(Map<String, Object> m, List<Map<String, Object>> configs) {
         return ProductResponse.builder()
-                .id(r.get(DSL.field("id", Integer.class)))
-                .bankId(r.get(DSL.field("bank_id", Integer.class)))
-                .bankName(r.get(DSL.field("bank_name", String.class)))
-                .name(r.get(DSL.field("name", String.class)))
-                .productType(r.get(DSL.field("product_type", String.class)))
-                .loanMin(r.get(DSL.field("loan_min", java.math.BigDecimal.class)))
-                .loanMax(r.get(DSL.field("loan_max", java.math.BigDecimal.class)))
-                .rateMin(r.get(DSL.field("rate_min", java.math.BigDecimal.class)))
-                .loanAmount(r.get(DSL.field("loan_amount", String.class)))
-                .loanTerm(r.get(DSL.field("loan_term", String.class)))
-                .description(r.get(DSL.field("description", String.class)))
-                .requirements(r.get(DSL.field("requirements", String.class)))
-                .sortOrder(r.get(DSL.field("sort_order", Integer.class)))
-                .status(r.get(DSL.field("status", Short.class)).intValue())
-                .createdAt(ldt(r, "created_at"))
-                .updatedAt(ldt(r, "updated_at"))
+                .id(((Number) m.get("id")).intValue())
+                .bankId(((Number) m.get("bank_id")).intValue())
+                .bankName((String) m.get("bank_name"))
+                .name((String) m.get("name"))
+                .productType(m.get("product_type") != null ? m.get("product_type").toString() : null)
+                .loanMin((java.math.BigDecimal) m.get("loan_min"))
+                .loanMax((java.math.BigDecimal) m.get("loan_max"))
+                .rateMin((java.math.BigDecimal) m.get("rate_min"))
+                .loanAmount((String) m.get("loan_amount"))
+                .loanTerm((String) m.get("loan_term"))
+                .description((String) m.get("description"))
+                .requirements((String) m.get("requirements"))
+                .sortOrder(m.get("sort_order") != null ? ((Number) m.get("sort_order")).intValue() : 0)
+                .status(m.get("status") != null ? ((Number) m.get("status")).intValue() : 1)
+                .createdAt(tsToLdt(m.get("created_at")))
+                .updatedAt(tsToLdt(m.get("updated_at")))
                 .materialConfigs(configs)
                 .build();
+    }
+
+    private LocalDateTime tsToLdt(Object val) {
+        if (val == null) return null;
+        if (val instanceof LocalDateTime ldt) return ldt;
+        if (val instanceof Timestamp ts) return ts.toLocalDateTime();
+        return null;
     }
 
     private MaterialItemResponse mapToMaterialItemResponse(Record r) {
