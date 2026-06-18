@@ -61,3 +61,62 @@ export interface LoginResponse {
 export function loginApi(phone: string, password: string) {
   return api.post<LoginResponse>('/auth/login', { phone, password })
 }
+
+// Pagination
+export interface PaginatedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+// Customers
+export interface ApiCustomer {
+  id: number
+  institutionId: number
+  advisorId: number | null
+  advisorName: string | null
+  name: string
+  contactName: string | null
+  contactPhone: string | null
+  financingNeed: string | null
+  loanPurpose: string | null
+  loanAmount: number | null
+  status: 'COLLECTING' | 'REVIEWING' | 'REPORTING' | 'SUBMITTED' | 'DONE' | 'PAUSED'
+  docCompleteness: number
+  aiSummary: string | null
+  riskNotes: string | null
+  createdAt: string
+  updatedAt: string
+  labels: string[]
+}
+
+export interface CreateCustomerRequest {
+  name: string
+  contactName?: string
+  contactPhone?: string
+  financingNeed?: string
+  loanAmount?: number
+  loanPurpose?: string
+  advisorId?: number
+}
+
+export function listCustomers(params: {
+  keyword?: string
+  status?: string
+  page?: number
+  pageSize?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params.keyword) qs.set('keyword', params.keyword)
+  if (params.status) qs.set('status', params.status)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const q = qs.toString()
+  return api.get<PaginatedResult<ApiCustomer>>(`/customers${q ? '?' + q : ''}`)
+}
+
+export function createCustomer(body: CreateCustomerRequest) {
+  return api.post<ApiCustomer>('/customers', body)
+}
