@@ -407,6 +407,7 @@ export default function ReportDetail() {
                   <th>字段名</th>
                   <th>AI填写值</th>
                   <th>最终值</th>
+                  <th>数据来源</th>
                   <th>AI状态</th>
                   <th>审核状态</th>
                   <th>操作</th>
@@ -422,6 +423,7 @@ export default function ReportDetail() {
                       <td className="cell-main">{f.field_label}</td>
                       <td className={f.ai_status === 'missing' ? 'text-red' : ''}>{f.ai_value || '—'}</td>
                       <td>{f.final_value || f.ai_value || '—'}</td>
+                      <td className="cell-sub">{f.source_hint || '—'}</td>
                       <td>
                         <span className={`badge ${ai.cls}`}>{ai.label}</span>
                         {f.ai_note && <div className="field-ai-note">{f.ai_note}</div>}

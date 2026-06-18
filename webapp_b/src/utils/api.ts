@@ -146,9 +146,13 @@ export function getCustomerOverview(id: number | string) {
 export interface ApiDocument {
   id: number
   customerId: number
+  customerName?: string
   uploaderId: number | null
   uploaderType: string
+  uploaderName?: string | null
   docType: string
+  aiDocType?: string | null
+  confidence?: number | null
   fileName: string
   fileUrl: string
   fileSize: number | null
@@ -160,6 +164,29 @@ export interface ApiDocument {
 
 export function listDocuments(customerId: number | string) {
   return api.get<ApiDocument[]>(`/customers/${customerId}/documents`)
+}
+
+export function listAllDocuments(params: {
+  aiParseStatus?: string
+  customerId?: number
+  page?: number
+  pageSize?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params.aiParseStatus) qs.set('aiParseStatus', params.aiParseStatus)
+  if (params.customerId) qs.set('customerId', String(params.customerId))
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const q = qs.toString()
+  return api.get<PaginatedResult<ApiDocument>>(`/documents${q ? '?' + q : ''}`)
+}
+
+export function confirmDocument(id: number, docType?: string) {
+  return api.post<ApiDocument>(`/documents/${id}/confirm`, { docType })
+}
+
+export function retryParseDocument(id: number) {
+  return api.post<ApiDocument>(`/documents/${id}/retry`, {})
 }
 
 export function deleteDocument(id: number) {
