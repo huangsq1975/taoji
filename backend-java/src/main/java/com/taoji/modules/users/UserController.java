@@ -47,7 +47,7 @@ public class UserController {
             @CurrentUser JwtUserDetails currentUser,
             @PathVariable Long id,
             @Valid @RequestBody UpdatePermissionsRequest request) {
-        return ApiResponse.ok(userService.updatePermissions(currentUser.getInstitutionId(), id, request));
+        return ApiResponse.ok(userService.updatePermissions(currentUser.getInstitutionId(), id, currentUser.getUserId(), request));
     }
 
     @PutMapping("/members/{id}/status")
