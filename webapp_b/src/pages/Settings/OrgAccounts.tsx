@@ -4,7 +4,7 @@ import './Settings.css'
 
 const ROLES = [
   { value: 'ADVISOR', label: '顾问' },
-  { value: 'MANAGER', label: '主管' },
+  { value: 'SUPERVISOR', label: '主管' },
   { value: 'ADMIN', label: '运营管理员' },
 ]
 
@@ -28,9 +28,9 @@ function scopeLabel(scope: string) {
 
 function RoleBadge({ role }: { role: string }) {
   const map: Record<string, { bg: string; text: string }> = {
-    MANAGER:  { bg: '#fdf4ff', text: '#9333ea' },
-    ADVISOR:  { bg: '#eff6ff', text: '#2563eb' },
-    ADMIN:    { bg: '#fffbeb', text: '#d97706' },
+    SUPERVISOR: { bg: '#fdf4ff', text: '#9333ea' },
+    ADVISOR:    { bg: '#eff6ff', text: '#2563eb' },
+    ADMIN:      { bg: '#fffbeb', text: '#d97706' },
   }
   const c = map[role] || { bg: '#f8fafc', text: '#64748b' }
   return <span className="badge" style={{ background: c.bg, color: c.text }}>{roleLabel(role)}</span>
@@ -154,6 +154,8 @@ interface PermModalProps {
 
 function PermModal({ acc, onClose, onSaved }: PermModalProps) {
   const [perms, setPerms] = useState<Set<string>>(new Set(acc.permissions))
+  const [role, setRole] = useState(acc.role)
+  const [dataScope, setDataScope] = useState(acc.dataScope)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
@@ -170,7 +172,7 @@ function PermModal({ acc, onClose, onSaved }: PermModalProps) {
     setLoading(true)
     setErr('')
     try {
-      const updated = await updateOrgAccountPermissions(acc.id, Array.from(perms))
+      const updated = await updateOrgAccountPermissions(acc.id, Array.from(perms), role, dataScope)
       onSaved(updated)
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : '保存失败')
@@ -187,12 +189,19 @@ function PermModal({ acc, onClose, onSaved }: PermModalProps) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div className="hint-box">
-            <span className="hint-label">角色：</span>
-            <span>{roleLabel(acc.role)}</span>
-            <span style={{ margin: '0 8px', color: '#cbd5e1' }}>·</span>
-            <span className="hint-label">数据范围：</span>
-            <span>{scopeLabel(acc.dataScope)}</span>
+          <div className="form-row" style={{ marginBottom: 16 }}>
+            <div className="form-field">
+              <label className="form-label">角色</label>
+              <select className="form-select" value={role} onChange={e => setRole(e.target.value)}>
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+            <div className="form-field">
+              <label className="form-label">数据范围</label>
+              <select className="form-select" value={dataScope} onChange={e => setDataScope(e.target.value)}>
+                {DATA_SCOPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
           <div className="perm-grid">
             {ALL_PERMISSIONS.map(perm => (

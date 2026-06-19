@@ -103,7 +103,11 @@ public class UserService {
     }
 
     @Transactional
-    public MemberResponse updatePermissions(Long institutionId, Long memberId, UpdatePermissionsRequest request) {
+    public MemberResponse updatePermissions(Long institutionId, Long memberId, Long operatorId, UpdatePermissionsRequest request) {
+        if (memberId.equals(operatorId)) {
+            throw AppException.badRequest("不能修改自己的权限");
+        }
+
         Record userRecord = dsl.select()
                 .from(DSL.table("users"))
                 .where(DSL.field("id").eq(memberId))
@@ -191,8 +195,21 @@ public class UserService {
         }).toList();
     }
 
+    public boolean hasPermission(Long userId, String permission) {
+        return dsl.fetchCount(
+                DSL.selectOne()
+                        .from(DSL.table("user_permissions"))
+                        .where(DSL.field("user_id").eq(userId))
+                        .and(DSL.field("permission").eq(permission))
+        ) > 0;
+    }
+
     @Transactional
-    public MemberResponse toggleMember(Long institutionId, Long memberId) {
+    public MemberResponse toggleMember(Long institutionId, Long memberId, Long operatorId) {
+        if (memberId.equals(operatorId)) {
+            throw AppException.badRequest("不能操作自己的账号");
+        }
+
         Record userRecord = dsl.select()
                 .from(DSL.table("users"))
                 .where(DSL.field("id").eq(memberId))

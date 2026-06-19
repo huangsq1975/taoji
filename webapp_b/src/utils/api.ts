@@ -557,8 +557,8 @@ export function toggleOrgAccount(id: number) {
   return api.post<ApiOrgAccount>(`/settings/accounts/${id}/toggle`, {})
 }
 
-export function updateOrgAccountPermissions(id: number, permissions: string[]) {
-  return api.put<ApiOrgAccount>(`/settings/accounts/${id}/permissions`, { permissions })
+export function updateOrgAccountPermissions(id: number, permissions: string[], role?: string, dataScope?: string) {
+  return api.put<ApiOrgAccount>(`/settings/accounts/${id}/permissions`, { permissions, role, dataScope })
 }
 
 // Usage Logs
