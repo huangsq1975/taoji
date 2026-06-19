@@ -248,38 +248,6 @@
   cursor: not-allowed;
 }
 
-.login-hint {
-  margin-top: 24px;
-  padding: 12px 14px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-}
-
-.login-hint-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0369a1;
-  margin-bottom: 6px;
-}
-
-.login-hint-row {
-  display: flex;
-  gap: 20px;
-  font-size: 12px;
-  color: #0369a1;
-}
-
-.login-hint-row span {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.login-hint-label {
-  color: #64748b;
-}
-
 .login-footer {
   margin-top: 32px;
   font-size: 12px;

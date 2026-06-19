@@ -91,14 +91,6 @@ export default function Login() {
     }
   }
 
-  function fillDemo() {
-    setPhone(DEMO_PHONE)
-    setPassword(DEMO_PASSWORD)
-    setPhoneErr('')
-    setPasswordErr('')
-    setGlobalErr('')
-  }
-
   return (
     <div className="login-page">
       {/* Left brand panel */}
@@ -186,22 +178,6 @@ export default function Login() {
               {loading ? '登录中…' : '登 录'}
             </button>
           </form>
-
-          <div className="login-hint">
-            <div className="login-hint-title">演示账号</div>
-            <div className="login-hint-row">
-              <span><span className="login-hint-label">手机号</span> {DEMO_PHONE}</span>
-              <span><span className="login-hint-label">密码</span> {DEMO_PASSWORD}</span>
-              <span>
-                <span
-                  onClick={fillDemo}
-                  style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  一键填入
-                </span>
-              </span>
-            </div>
-          </div>
 
           <div className="login-footer">
             AI生成结果仅供参考，最终以顾问审核为准
