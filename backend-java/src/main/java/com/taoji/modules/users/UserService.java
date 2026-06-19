@@ -82,8 +82,8 @@ public class UserService {
                 .set(DSL.field("name"), request.getName())
                 .set(DSL.field("phone"), request.getPhone())
                 .set(DSL.field("password_hash"), passwordHash)
-                .set(DSL.field("role"), request.getRole())
-                .set(DSL.field("data_scope"), request.getDataScope())
+                .set(DSL.field("role"), DSL.field("?::user_role", Object.class, request.getRole()))
+                .set(DSL.field("data_scope"), DSL.field("?::data_scope", Object.class, request.getDataScope()))
                 .set(DSL.field("status"), (short) 1)
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .set(DSL.field("updated_at"), LocalDateTime.now())
@@ -121,14 +121,14 @@ public class UserService {
 
         if (request.getRole() != null) {
             dsl.update(DSL.table("users"))
-                    .set(DSL.field("role"), request.getRole())
+                    .set(DSL.field("role"), DSL.field("?::user_role", Object.class, request.getRole()))
                     .set(DSL.field("updated_at"), LocalDateTime.now())
                     .where(DSL.field("id").eq(memberId))
                     .execute();
         }
         if (request.getDataScope() != null) {
             dsl.update(DSL.table("users"))
-                    .set(DSL.field("data_scope"), request.getDataScope())
+                    .set(DSL.field("data_scope"), DSL.field("?::data_scope", Object.class, request.getDataScope()))
                     .set(DSL.field("updated_at"), LocalDateTime.now())
                     .where(DSL.field("id").eq(memberId))
                     .execute();
