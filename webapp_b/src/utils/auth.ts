@@ -44,3 +44,9 @@ export function roleLabel(role: string): string {
   }
   return map[role] ?? role
 }
+
+/** 主管、管理员可访问管理后台；顾问不可 */
+export function canAccessAdminPanel(): boolean {
+  const role = getAuth()?.role
+  return role === 'ADMIN' || role === 'SUPERVISOR'
+}

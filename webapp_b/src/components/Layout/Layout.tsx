@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AiAssistant from '../AiAssistant/AiAssistant'
-import { getAuth, clearAuth, roleLabel } from '../../utils/auth'
+import { getAuth, clearAuth, roleLabel, canAccessAdminPanel } from '../../utils/auth'
 import './Layout.css'
 
 const navSections = [
@@ -73,6 +73,10 @@ export default function Layout() {
   const userAvatar = userName.slice(-1)
   const userRoleLabel = user ? roleLabel(user.role) : ''
   const institutionName = user?.institutionName ?? ''
+  const showAdminNav = canAccessAdminPanel()
+  const visibleNavSections = navSections.filter(
+    section => section.label !== '管理后台' || showAdminNav
+  )
 
   function handleLogout() {
     clearAuth()
@@ -91,7 +95,7 @@ export default function Layout() {
         </div>
 
         <nav className="sidebar-nav">
-          {navSections.map((section) => (
+          {visibleNavSections.map((section) => (
             <div key={section.label} className="nav-section">
               <div className="nav-section-label">{section.label}</div>
               {section.items.map((item) => (
@@ -109,17 +113,6 @@ export default function Layout() {
             </div>
           ))}
         </nav>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-avatar">{userAvatar}</div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{userName}</div>
-              <div className="sidebar-user-role">{institutionName} · {userRoleLabel}</div>
-            </div>
-          </div>
-          <button className="sidebar-logout" onClick={handleLogout}>注销</button>
-        </div>
       </aside>
 
       <div className={`main-wrapper${aiOpen ? ' main-wrapper-shifted' : ''}`}>
@@ -141,8 +134,12 @@ export default function Layout() {
             </div>
             <div className="topbar-user">
               <div className="topbar-avatar">{userAvatar}</div>
-              <span>{userName}</span>
+              <div className="topbar-user-info">
+                <div className="topbar-user-name">{userName}</div>
+                <div className="topbar-user-role">{institutionName} · {userRoleLabel}</div>
+              </div>
             </div>
+            <button className="topbar-logout" onClick={handleLogout}>注销</button>
           </div>
         </header>
 

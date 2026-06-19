@@ -3,6 +3,9 @@ package com.taoji.modules.customers;
 import com.taoji.common.AppException;
 import com.taoji.common.PageRequest;
 import com.taoji.common.PaginatedResult;
+import com.taoji.jooq.enums.CustomerStatus;
+import com.taoji.jooq.tables.Customers;
+import com.taoji.jooq.tables.Users;
 import com.taoji.modules.customers.dto.*;
 import com.taoji.security.JwtUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -48,21 +51,20 @@ public class CustomerService {
                 .where(condition)
                 .fetchOneInto(Integer.class);
 
-        var records = dsl.select(
-                        DSL.field("c.*"),
-                        DSL.field("u.name").as("advisor_name")
-                )
-                .from(DSL.table("customers").as("c"))
-                .leftJoin(DSL.table("users").as("u"))
-                .on(DSL.field("c.advisor_id").eq(DSL.field("u.id")))
+        var c = Customers.CUSTOMERS.as("c");
+        var u = Users.USERS.as("u");
+
+        var records = dsl.select(c.asterisk(), u.NAME.as("advisor_name"))
+                .from(c)
+                .leftJoin(u).on(c.ADVISOR_ID.eq(u.ID))
                 .where(condition)
-                .orderBy(DSL.field("c.updated_at").desc())
+                .orderBy(c.UPDATED_AT.desc())
                 .limit(pageRequest.getPageSize())
                 .offset(pageRequest.offset())
                 .fetch();
 
         List<CustomerResponse> customers = records.stream()
-                .map(r -> mapToCustomerResponse(r, loadLabels(r.get(DSL.field("c.id", Long.class)))))
+                .map(r -> mapToCustomerResponse(r, c, loadLabels(r.get(c.ID))))
                 .toList();
 
         return PaginatedResult.of(customers, total == null ? 0 : total, pageRequest);
@@ -81,7 +83,7 @@ public class CustomerService {
                 .set(DSL.field("financing_need"), request.getFinancingNeed())
                 .set(DSL.field("loan_purpose"), request.getLoanPurpose())
                 .set(DSL.field("loan_amount"), request.getLoanAmount())
-                .set(DSL.field("status"), "COLLECTING")
+                .set(DSL.field("status", String.class), DSL.field("?::customer_status", String.class, "COLLECTING"))
                 .set(DSL.field("doc_completeness"), (short) 0)
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .set(DSL.field("updated_at"), LocalDateTime.now())
@@ -99,13 +101,12 @@ public class CustomerService {
         condition = condition.and(DSL.field("c.id").eq(customerId))
                 .and(DSL.field("c.deleted_at").isNull());
 
-        Record r = dsl.select(
-                        DSL.field("c.*"),
-                        DSL.field("u.name").as("advisor_name")
-                )
-                .from(DSL.table("customers").as("c"))
-                .leftJoin(DSL.table("users").as("u"))
-                .on(DSL.field("c.advisor_id").eq(DSL.field("u.id")))
+        var c = Customers.CUSTOMERS.as("c");
+        var u = Users.USERS.as("u");
+
+        Record r = dsl.select(c.asterisk(), u.NAME.as("advisor_name"))
+                .from(c)
+                .leftJoin(u).on(c.ADVISOR_ID.eq(u.ID))
                 .where(condition)
                 .fetchOne();
 
@@ -113,7 +114,7 @@ public class CustomerService {
             throw AppException.notFound("客户不存在或无访问权限");
         }
 
-        return mapToCustomerResponse(r, loadLabels(customerId));
+        return mapToCustomerResponse(r, c, loadLabels(customerId));
     }
 
     @Transactional
@@ -130,7 +131,12 @@ public class CustomerService {
         if (request.getFinancingNeed() != null) update = update.set(DSL.field("financing_need"), request.getFinancingNeed());
         if (request.getLoanPurpose() != null) update = update.set(DSL.field("loan_purpose"), request.getLoanPurpose());
         if (request.getLoanAmount() != null) update = update.set(DSL.field("loan_amount"), request.getLoanAmount());
-        if (request.getStatus() != null) update = update.set(DSL.field("status"), request.getStatus());
+        if (request.getStatus() != null) {
+            update = update.set(
+                    DSL.field("status", String.class),
+                    DSL.field("?::customer_status", String.class, request.getStatus())
+            );
+        }
         if (request.getAiSummary() != null) update = update.set(DSL.field("ai_summary"), request.getAiSummary());
         if (request.getRiskNotes() != null) update = update.set(DSL.field("risk_notes"), request.getRiskNotes());
 
@@ -145,7 +151,7 @@ public class CustomerService {
                 dsl.insertInto(DSL.table("customer_labels"))
                         .set(DSL.field("customer_id"), customerId)
                         .set(DSL.field("label"), label)
-                        .set(DSL.field("label_type"), "manual")
+                        .set(DSL.field("label_type", String.class), DSL.field("?::label_type", String.class, "manual"))
                         .execute();
             }
         }
@@ -187,7 +193,7 @@ public class CustomerService {
         Long followUpId = dsl.insertInto(DSL.table("follow_up_records"))
                 .set(DSL.field("customer_id"), customerId)
                 .set(DSL.field("advisor_id"), currentUser.getUserId())
-                .set(DSL.field("type"), request.getType())
+                .set(DSL.field("type", String.class), DSL.field("?::follow_up_type", String.class, request.getType()))
                 .set(DSL.field("content"), request.getContent())
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
@@ -281,24 +287,25 @@ public class CustomerService {
                 .fetchInto(String.class);
     }
 
-    private CustomerResponse mapToCustomerResponse(Record r, List<String> labels) {
+    private CustomerResponse mapToCustomerResponse(Record r, Customers c, List<String> labels) {
+        CustomerStatus status = r.get(c.STATUS);
         return CustomerResponse.builder()
-                .id(r.get(DSL.field("c.id", Long.class)))
-                .institutionId(r.get(DSL.field("c.institution_id", Long.class)))
-                .advisorId(r.get(DSL.field("c.advisor_id", Long.class)))
+                .id(r.get(c.ID))
+                .institutionId(r.get(c.INSTITUTION_ID))
+                .advisorId(r.get(c.ADVISOR_ID))
                 .advisorName(r.get(DSL.field("advisor_name", String.class)))
-                .name(r.get(DSL.field("c.name", String.class)))
-                .contactName(r.get(DSL.field("c.contact_name", String.class)))
-                .contactPhone(r.get(DSL.field("c.contact_phone", String.class)))
-                .financingNeed(r.get(DSL.field("c.financing_need", String.class)))
-                .loanPurpose(r.get(DSL.field("c.loan_purpose", String.class)))
-                .loanAmount(r.get(DSL.field("c.loan_amount", java.math.BigDecimal.class)))
-                .status(r.get(DSL.field("c.status", String.class)))
-                .docCompleteness(r.get(DSL.field("c.doc_completeness", Short.class)).intValue())
-                .aiSummary(r.get(DSL.field("c.ai_summary", String.class)))
-                .riskNotes(r.get(DSL.field("c.risk_notes", String.class)))
-                .createdAt(r.get(DSL.field("c.created_at", LocalDateTime.class)))
-                .updatedAt(r.get(DSL.field("c.updated_at", LocalDateTime.class)))
+                .name(r.get(c.NAME))
+                .contactName(r.get(c.CONTACT_NAME))
+                .contactPhone(r.get(c.CONTACT_PHONE))
+                .financingNeed(r.get(c.FINANCING_NEED))
+                .loanPurpose(r.get(c.LOAN_PURPOSE))
+                .loanAmount(r.get(c.LOAN_AMOUNT))
+                .status(status != null ? status.getLiteral() : null)
+                .docCompleteness(r.get(c.DOC_COMPLETENESS).intValue())
+                .aiSummary(r.get(c.AI_SUMMARY))
+                .riskNotes(r.get(c.RISK_NOTES))
+                .createdAt(r.get(c.CREATED_AT))
+                .updatedAt(r.get(c.UPDATED_AT))
                 .labels(labels)
                 .build();
     }

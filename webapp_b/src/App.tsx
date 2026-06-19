@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 import Login from './pages/Login/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Customers from './pages/Customers/Customers'
@@ -38,11 +39,11 @@ export default function App() {
         <Route path="parsing" element={<Parsing />} />
         <Route path="banks" element={<BankCenter />} />
         <Route path="banks/:id" element={<BankDetail />} />
-        <Route path="settings/templates" element={<Templates />} />
-        <Route path="settings/membership" element={<Membership />} />
-        <Route path="settings/usage" element={<UsageLogs />} />
-        <Route path="settings/accounts" element={<OrgAccounts />} />
-        <Route path="settings/api" element={<ApiConfig />} />
+        <Route path="settings/templates" element={<AdminRoute><Templates /></AdminRoute>} />
+        <Route path="settings/membership" element={<AdminRoute><Membership /></AdminRoute>} />
+        <Route path="settings/usage" element={<AdminRoute><UsageLogs /></AdminRoute>} />
+        <Route path="settings/accounts" element={<AdminRoute><OrgAccounts /></AdminRoute>} />
+        <Route path="settings/api" element={<AdminRoute><ApiConfig /></AdminRoute>} />
         <Route path="settings/change-password" element={<ChangePassword />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
