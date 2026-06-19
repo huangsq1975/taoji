@@ -233,7 +233,8 @@ public class CustomerService {
         Integer authCount = dsl.selectCount()
                 .from(DSL.table("customer_authorizations"))
                 .where(DSL.field("customer_id").eq(customerId))
-                .and(DSL.field("status").eq("signed"))
+                .and(DSL.field("status", String.class).eq(
+                        DSL.field("?::auth_status", String.class, "signed")))
                 .fetchOneInto(Integer.class);
 
         // Count report tasks
