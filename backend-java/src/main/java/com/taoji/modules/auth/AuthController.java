@@ -1,6 +1,7 @@
 package com.taoji.modules.auth;
 
 import com.taoji.common.ApiResponse;
+import com.taoji.modules.auth.dto.ChangePasswordRequest;
 import com.taoji.modules.auth.dto.LoginRequest;
 import com.taoji.modules.auth.dto.LoginResponse;
 import com.taoji.modules.auth.dto.WxLoginRequest;
@@ -44,5 +45,14 @@ public class AuthController {
     @Operation(summary = "获取当前用户信息", description = "返回当前登录用户的详细信息及权限列表")
     public ApiResponse<Map<String, Object>> me(@CurrentUser JwtUserDetails currentUser) {
         return ApiResponse.ok(authService.getCurrentUser(currentUser.getUserId()));
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "修改密码", description = "当前登录用户修改自己的密码")
+    public ApiResponse<Void> changePassword(
+            @CurrentUser JwtUserDetails currentUser,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(currentUser.getUserId(), request);
+        return ApiResponse.ok(null);
     }
 }

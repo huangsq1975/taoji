@@ -1,6 +1,7 @@
 package com.taoji.modules.auth;
 
 import com.taoji.common.AppException;
+import com.taoji.modules.auth.dto.ChangePasswordRequest;
 import com.taoji.modules.auth.dto.LoginRequest;
 import com.taoji.modules.auth.dto.LoginResponse;
 import com.taoji.modules.auth.dto.WxLoginRequest;
@@ -217,6 +218,28 @@ public class AuthService {
                 "institutionName", userRecord.get(DSL.field("institution_name", String.class)),
                 "permissions", permissions
         );
+    }
+
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        Record userRecord = dsl.select(DSL.field("password_hash", String.class))
+                .from(DSL.table("users"))
+                .where(DSL.field("id").eq(userId))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOne();
+
+        if (userRecord == null) {
+            throw AppException.notFound("用户不存在");
+        }
+
+        String storedHash = userRecord.get(DSL.field("password_hash", String.class));
+        if (!passwordEncoder.matches(request.getOldPassword(), storedHash)) {
+            throw AppException.badRequest("原密码错误");
+        }
+
+        dsl.update(DSL.table("users"))
+                .set(DSL.field("password_hash"), passwordEncoder.encode(request.getNewPassword()))
+                .where(DSL.field("id").eq(userId))
+                .execute();
     }
 
     @SuppressWarnings("unchecked")
