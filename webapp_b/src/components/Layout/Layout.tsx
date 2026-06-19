@@ -31,6 +31,12 @@ const navSections = [
       { to: '/settings/api', label: 'API配置', icon: '🔌' },
     ],
   },
+  {
+    label: '账号安全',
+    items: [
+      { to: '/settings/change-password', label: '修改密码', icon: '🔑' },
+    ],
+  },
 ]
 
 const breadcrumbMap: Record<string, string[]> = {
@@ -44,6 +50,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/settings/usage': ['管理后台', '调用记录'],
   '/settings/accounts': ['管理后台', '机构账号'],
   '/settings/api': ['管理后台', 'API配置'],
+  '/settings/change-password': ['账号安全', '修改密码'],
 }
 
 function getBreadcrumb(pathname: string): string[] {

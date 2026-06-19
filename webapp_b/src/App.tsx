@@ -15,6 +15,7 @@ import Membership from './pages/Settings/Membership'
 import UsageLogs from './pages/Settings/UsageLogs'
 import OrgAccounts from './pages/Settings/OrgAccounts'
 import ApiConfig from './pages/Settings/ApiConfig'
+import ChangePassword from './pages/Settings/ChangePassword'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="settings/usage" element={<UsageLogs />} />
         <Route path="settings/accounts" element={<OrgAccounts />} />
         <Route path="settings/api" element={<ApiConfig />} />
+        <Route path="settings/change-password" element={<ChangePassword />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -62,6 +62,10 @@ export function loginApi(phone: string, password: string) {
   return api.post<LoginResponse>('/auth/login', { phone, password })
 }
 
+export function changePasswordApi(body: { oldPassword: string; newPassword: string }) {
+  return api.post<void>('/auth/change-password', body)
+}
+
 // Pagination
 export interface PaginatedResult<T> {
   items: T[]
