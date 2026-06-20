@@ -35,4 +35,23 @@ Page({
     const id = e.currentTarget.dataset['id'] as string
     wx.navigateTo({ url: '/pages/bank/bank?customerId=' + id })
   },
+
+  onDeleteTap(e: WechatMiniprogram.TouchEvent) {
+    const id = e.currentTarget.dataset['id'] as string
+    const name = e.currentTarget.dataset['name'] as string
+    wx.showModal({
+      title: '确认删除',
+      content: `确定删除客户「${name}」吗？此操作不可恢复。`,
+      confirmText: '删除',
+      confirmColor: '#ef4444',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({
+            customers: this.data.customers.filter(c => c.id !== id),
+          })
+        }
+      },
+    })
+  },
 })

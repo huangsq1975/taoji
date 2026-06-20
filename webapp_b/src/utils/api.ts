@@ -133,6 +133,10 @@ export function updateCustomer(id: number | string, body: Partial<CreateCustomer
   return api.put<ApiCustomer>(`/customers/${id}`, body)
 }
 
+export function deleteCustomer(id: number | string) {
+  return api.delete<void>(`/customers/${id}`)
+}
+
 // Customer overview counts
 export interface CustomerOverview {
   customer: ApiCustomer

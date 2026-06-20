@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listCustomers, createCustomer, type ApiCustomer } from '../../utils/api'
+import { listCustomers, createCustomer, deleteCustomer, type ApiCustomer } from '../../utils/api'
 import './Customers.css'
 
 // ─── Status mapping ───────────────────────────────────────────────────────────
@@ -179,6 +179,54 @@ function Pagination({ page, totalPages, total, pageSize, onChange }: {
   )
 }
 
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+
+function DeleteConfirmModal({ customer, onClose, onDeleted }: {
+  customer: ApiCustomer
+  onClose: () => void
+  onDeleted: (id: number) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleConfirm() {
+    setLoading(true)
+    setError('')
+    try {
+      await deleteCustomer(customer.id)
+      onDeleted(customer.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除失败')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">确认删除客户</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {error && <div className="modal-error">{error}</div>}
+          <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
+            确定删除客户 <strong>「{customer.name}」</strong> 吗？<br />
+            删除后该客户的所有数据将不再显示，此操作不可恢复。
+          </p>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose} disabled={loading}>取消</button>
+          <button className="btn" style={{ background: '#dc2626', color: 'white' }}
+            onClick={handleConfirm} disabled={loading}>
+            {loading ? '删除中…' : '确认删除'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
@@ -195,6 +243,7 @@ export default function Customers() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<ApiCustomer | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword), 400)
@@ -228,6 +277,12 @@ export default function Customers() {
   function handleCreated(c: ApiCustomer) {
     setShowCreate(false)
     navigate(`/customers/${c.id}`)
+  }
+
+  function handleDeleted(id: number) {
+    setConfirmDelete(null)
+    setCustomers(prev => prev.filter(c => c.id !== id))
+    setTotal(prev => prev - 1)
   }
 
   return (
@@ -330,10 +385,17 @@ export default function Customers() {
                       <div className="cell-sub">{formatDate(c.updatedAt)}</div>
                     </td>
                     <td>
-                      <button className="btn-sm btn-primary"
-                        onClick={e => { e.stopPropagation(); navigate('/reports') }}>
-                        AI填表
-                      </button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-sm btn-primary"
+                          onClick={e => { e.stopPropagation(); navigate('/reports') }}>
+                          AI填表
+                        </button>
+                        <button className="btn-sm"
+                          style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+                          onClick={e => { e.stopPropagation(); setConfirmDelete(c) }}>
+                          删除
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -356,6 +418,13 @@ export default function Customers() {
 
       {showCreate && (
         <CreateCustomerModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />
+      )}
+      {confirmDelete && (
+        <DeleteConfirmModal
+          customer={confirmDelete}
+          onClose={() => setConfirmDelete(null)}
+          onDeleted={handleDeleted}
+        />
       )}
     </div>
   )

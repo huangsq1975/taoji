@@ -28,6 +28,9 @@
         <view class="action-btn" catchtap="onBankTap" data-id="{{item.id}}">
           <text>整理材料</text>
         </view>
+        <view class="action-btn action-btn-delete" catchtap="onDeleteTap" data-id="{{item.id}}" data-name="{{item.name}}">
+          <text>删除</text>
+        </view>
       </view>
     </view>
     <view style="height: 40rpx" />
