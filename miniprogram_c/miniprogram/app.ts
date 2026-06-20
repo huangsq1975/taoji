@@ -39,11 +39,11 @@ App<IAppOption>({
               data?: { token?: string; userId?: number; name?: string; advisorId?: number }
             }
             const data = payload.data
-            if (data?.token) {
+            if (data && data.token) {
               wx.setStorageSync('token', data.token)
               this.globalData.token = data.token
-              this.globalData.customerId = data.userId ?? null
-              this.globalData.advisorId = data.advisorId ?? advisorId
+              this.globalData.customerId = data.userId != null ? data.userId : null
+              this.globalData.advisorId = data.advisorId != null ? data.advisorId : advisorId
               this.globalData.userInfo.name = data.name || '微信用户'
               this.globalData.userInfo.isLoggedIn = true
             }
