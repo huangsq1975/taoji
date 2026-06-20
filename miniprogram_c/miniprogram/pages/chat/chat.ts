@@ -1,5 +1,13 @@
 import { quickPills, getAiReply, ChatMessage } from '../../utils/mock'
 
+const API_BASE = 'http://localhost:3000/api/v1'
+
+interface AdvisorItem {
+  id: number
+  name: string
+  role: string
+}
+
 const app = getApp<IAppOption>()
 
 let msgIdCounter = 0
@@ -15,6 +23,9 @@ Page({
     inputValue: '',
     sidebarVisible: false,
     uploadSheetVisible: false,
+    advisorSheetVisible: false,
+    advisorList: [] as AdvisorItem[],
+    selectedAdvisorIdx: -1,
     scrollToId: '',
     statusBarHeight: 0,
     userName: '您',
@@ -30,6 +41,68 @@ Page({
     if (user) {
       this.setData({ userName: user.name })
     }
+    // If login already completed, check immediately; otherwise register callback
+    if (app.globalData.token) {
+      this.checkAndShowAdvisorSheet()
+    } else {
+      app.loginReadyCallback = () => {
+        this.checkAndShowAdvisorSheet()
+      }
+    }
+  },
+
+  checkAndShowAdvisorSheet() {
+    if (!app.globalData.needsAdvisorSelection) return
+    wx.request({
+      url: `${API_BASE}/advisors`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${app.globalData.token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: AdvisorItem[] }
+        const list = payload.data || []
+        this.setData({ advisorList: list, advisorSheetVisible: true })
+      },
+      fail: () => {
+        wx.showToast({ title: '获取顾问列表失败', icon: 'none' })
+      },
+    })
+  },
+
+  onAdvisorItemTap(e: WechatMiniprogram.TouchEvent) {
+    const idx = e.currentTarget.dataset['idx'] as number
+    this.setData({ selectedAdvisorIdx: idx })
+  },
+
+  onAdvisorConfirm() {
+    const idx = this.data.selectedAdvisorIdx
+    if (idx < 0) {
+      wx.showToast({ title: '请先选择顾问', icon: 'none' })
+      return
+    }
+    const advisor = this.data.advisorList[idx]
+    wx.showLoading({ title: '绑定中...' })
+    wx.request({
+      url: `${API_BASE}/auth/bind-advisor`,
+      method: 'POST',
+      header: { Authorization: `Bearer ${app.globalData.token}` },
+      data: { advisorId: advisor.id },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        wx.hideLoading()
+        const payload = res.data as { data?: { customerId?: number; advisorId?: number } }
+        const data = payload.data
+        app.globalData.advisorId = (data && data.advisorId != null) ? data.advisorId : advisor.id
+        if (data && data.customerId != null) {
+          app.globalData.customerId = data.customerId
+        }
+        app.globalData.needsAdvisorSelection = false
+        this.setData({ advisorSheetVisible: false })
+        wx.showToast({ title: '已绑定顾问', icon: 'success' })
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({ title: '绑定失败，请重试', icon: 'none' })
+      },
+    })
   },
 
   onInputChange(e: WechatMiniprogram.Input) {

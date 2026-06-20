@@ -10,5 +10,7 @@ interface IAppOption {
     customerId: number | null
     advisorId: number | null
     token: string | null
+    needsAdvisorSelection: boolean
   }
+  loginReadyCallback: (() => void) | null
 }

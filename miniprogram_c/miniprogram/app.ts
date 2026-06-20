@@ -11,7 +11,9 @@ App<IAppOption>({
     customerId: null as number | null,
     advisorId: null as number | null,
     token: null as string | null,
+    needsAdvisorSelection: false,
   },
+  loginReadyCallback: null as (() => void) | null,
   onLaunch(options: WechatMiniprogram.App.LaunchShowOption) {
     // Extract advisorId from QR code scene param (format: "a={advisorId}")
     let advisorId: number | null = null
@@ -45,6 +47,11 @@ App<IAppOption>({
               this.globalData.advisorId = data.advisorId != null ? data.advisorId : advisorId
               this.globalData.userInfo.name = data.name || '微信用户'
               this.globalData.userInfo.isLoggedIn = true
+              this.globalData.needsAdvisorSelection = this.globalData.advisorId === null
+            }
+            if (this.loginReadyCallback) {
+              this.loginReadyCallback()
+              this.loginReadyCallback = null
             }
           },
           fail: (err) => {

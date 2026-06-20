@@ -129,6 +129,35 @@
     </view>
   </view>
 
+  <!-- Advisor selection sheet -->
+  <view wx:if="{{advisorSheetVisible}}" class="sheet-mask">
+    <view class="sheet advisor-sheet" catchtap="">
+      <view class="advisor-sheet-title">请选择您的顾问</view>
+      <view class="advisor-sheet-sub">选择后将为您创建账号并绑定顾问</view>
+      <scroll-view scroll-y class="advisor-list">
+        <view
+          wx:for="{{advisorList}}"
+          wx:key="id"
+          class="advisor-item {{selectedAdvisorIdx === index ? 'advisor-item-selected' : ''}}"
+          bindtap="onAdvisorItemTap"
+          data-idx="{{index}}"
+        >
+          <view class="advisor-avatar">
+            <text class="advisor-avatar-text">{{item.name[0]}}</text>
+          </view>
+          <view class="advisor-info">
+            <text class="advisor-name">{{item.name}}</text>
+            <text class="advisor-role">{{item.role}}</text>
+          </view>
+          <view wx:if="{{selectedAdvisorIdx === index}}" class="advisor-check">✓</view>
+        </view>
+      </scroll-view>
+      <view class="advisor-confirm-btn {{selectedAdvisorIdx >= 0 ? 'advisor-confirm-btn-active' : ''}}" bindtap="onAdvisorConfirm">
+        <text>确定</text>
+      </view>
+    </view>
+  </view>
+
   <!-- Upload sheet -->
   <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
     <view class="sheet" catchtap="">
