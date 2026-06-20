@@ -1,5 +1,7 @@
 package com.taoji.modules.auth;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taoji.common.AppException;
 import com.taoji.modules.auth.dto.ChangePasswordRequest;
 import com.taoji.modules.auth.dto.LoginRequest;
@@ -29,6 +31,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final WebClient.Builder webClientBuilder;
+    private final ObjectMapper objectMapper;
 
     @Value("${wechat.app-id:}")
     private String wxAppId;
@@ -367,7 +370,19 @@ public class AuthService {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private Map<String, Object> fetchWeChatJson(String url) throws Exception {
+        String body = webClientBuilder.build()
+                .get()
+                .uri(url)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        return objectMapper.readValue(body, new TypeReference<>() {});
+    }
+
     private String getWxAccessToken() {
         long now = System.currentTimeMillis();
         if (cachedAccessToken.get() != null && now < accessTokenExpiry) {
@@ -377,12 +392,7 @@ public class AuthService {
             String url = String.format(
                     "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
                     wxAppId, wxAppSecret);
-            Map<String, Object> result = webClientBuilder.build()
-                    .get()
-                    .uri(url)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+            Map<String, Object> result = fetchWeChatJson(url);
             if (result == null || result.containsKey("errcode")) {
                 throw AppException.internalError("获取微信 access_token 失败：" + (result != null ? result.get("errmsg") : "无响应"));
             }
@@ -400,7 +410,6 @@ public class AuthService {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private String fetchWxOpenid(String code) {
         if (wxAppId.isBlank() || wxAppSecret.isBlank()) {
             log.warn("WeChat credentials not configured, using code as mock openid for dev");
@@ -410,12 +419,7 @@ public class AuthService {
             String url = String.format(
                     "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
                     wxAppId, wxAppSecret, code);
-            Map<String, Object> result = webClientBuilder.build()
-                    .get()
-                    .uri(url)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+            Map<String, Object> result = fetchWeChatJson(url);
             if (result == null || result.containsKey("errcode")) {
                 throw AppException.badRequest("微信登录失败：" + (result != null ? result.get("errmsg") : "无响应"));
             }
