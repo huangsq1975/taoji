@@ -24,8 +24,6 @@ App<IAppOption>({
         this.globalData.advisorId = advisorId
       }
     }
-
-<<<<<<< HEAD
     wx.login({
       success: res => {
         const body: Record<string, unknown> = { code: res.code }
@@ -55,36 +53,5 @@ App<IAppOption>({
         })
       },
     })
-=======
-    // Only call backend login when opened via advisor QR code scan
-    if (advisorId !== null) {
-      wx.login({
-        success: res => {
-          wx.request({
-            url: `${API_BASE}/auth/wx-login`,
-            method: 'POST',
-            data: { code: res.code, advisorId },
-            success: (loginRes: WechatMiniprogram.RequestSuccessCallbackResult) => {
-              const payload = loginRes.data as {
-                data?: { token?: string; userId?: number; name?: string; advisorId?: number }
-              }
-              const data = payload.data
-              if (data?.token) {
-                wx.setStorageSync('token', data.token)
-                this.globalData.token = data.token
-                this.globalData.customerId = data.userId ?? null
-                this.globalData.advisorId = data.advisorId ?? advisorId
-                this.globalData.userInfo.name = data.name || '微信用户'
-                this.globalData.userInfo.isLoggedIn = true
-              }
-            },
-            fail: (err) => {
-              console.error('wx-login request failed:', err)
-            },
-          })
-        },
-      })
-    }
->>>>>>> eb7e13b (Modify files)
   },
 })
