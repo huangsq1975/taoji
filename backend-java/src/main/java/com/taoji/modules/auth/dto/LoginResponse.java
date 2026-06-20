@@ -15,4 +15,6 @@ public class LoginResponse {
     private String institutionName;
     private String phone;
     private String dataScope;
+    /** Set when role=CUSTOMER — the advisor this customer belongs to */
+    private Long advisorId;
 }

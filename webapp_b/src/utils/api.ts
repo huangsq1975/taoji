@@ -620,3 +620,18 @@ export function getApiConfig() {
 export function regenerateApiKey() {
   return api.post<ApiApiConfig & { apiKeyFull: string }>('/settings/api-config/regenerate-key', {})
 }
+
+// Advisor invite QR code — returns a blob URL for the PNG image
+export function getAdvisorInviteQrcode(): Promise<string> {
+  const token = getToken()
+  return fetch(`${BASE}/advisor/invite-qrcode`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  }).then(async r => {
+    if (!r.ok) {
+      const json = await r.json()
+      throw new Error(json.message || '获取二维码失败')
+    }
+    const blob = await r.blob()
+    return URL.createObjectURL(blob)
+  })
+}

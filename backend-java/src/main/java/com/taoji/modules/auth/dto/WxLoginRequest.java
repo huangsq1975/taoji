@@ -13,4 +13,9 @@ public class WxLoginRequest {
      * Optional: associate this wx user with an existing customer record
      */
     private Long customerId;
+
+    /**
+     * Optional: customer scanned advisor's QR code — create/bind customer under this advisor
+     */
+    private Long advisorId;
 }

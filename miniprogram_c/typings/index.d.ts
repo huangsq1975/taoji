@@ -2,10 +2,13 @@
 
 interface IAppOption {
   globalData: {
-    userInfo?: {
+    userInfo: {
       name: string
       phone: string
       isLoggedIn: boolean
     }
+    customerId: number | null
+    advisorId: number | null
+    token: string | null
   }
 }

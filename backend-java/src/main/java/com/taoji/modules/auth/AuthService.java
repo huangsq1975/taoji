@@ -18,6 +18,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -90,6 +91,11 @@ public class AuthService {
         // Exchange code for openid via WeChat API
         String openid = fetchWxOpenid(request.getCode());
 
+        // ── QR code scan flow: customer scanned advisor's invite QR code ──
+        if (request.getAdvisorId() != null) {
+            return wxLoginAsCustomer(openid, request.getAdvisorId());
+        }
+
         // Try to find existing user by wx_openid
         Record userRecord = dsl.select()
                 .from(DSL.table("users"))
@@ -139,6 +145,76 @@ public class AuthService {
                 .institutionName(institutionName)
                 .phone(phone)
                 .dataScope(dataScope)
+                .build();
+    }
+
+    /**
+     * Customer scanned an advisor's invite QR code.
+     * Find or create a customer record and return a CUSTOMER-role JWT.
+     */
+    private LoginResponse wxLoginAsCustomer(String openid, Long advisorId) {
+        // Look up advisor to get institution
+        Record advisorRecord = dsl.select(
+                        DSL.field("institution_id", Long.class),
+                        DSL.field("name", String.class))
+                .from(DSL.table("users"))
+                .where(DSL.field("id").eq(advisorId))
+                .and(DSL.field("deleted_at").isNull())
+                .and(DSL.field("status").eq((short) 1))
+                .fetchOne();
+
+        if (advisorRecord == null) {
+            throw AppException.notFound("顾问不存在");
+        }
+        Long institutionId = advisorRecord.get(DSL.field("institution_id", Long.class));
+
+        // Check if customer already exists with this openid
+        Record existing = dsl.select(
+                        DSL.field("id", Long.class),
+                        DSL.field("advisor_id", Long.class),
+                        DSL.field("name", String.class))
+                .from(DSL.table("customers"))
+                .where(DSL.field("wx_openid").eq(openid))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOne();
+
+        Long customerId;
+        String customerName;
+
+        if (existing != null) {
+            customerId = existing.get(DSL.field("id", Long.class));
+            customerName = existing.get(DSL.field("name", String.class));
+            Long existingAdvisorId = existing.get(DSL.field("advisor_id", Long.class));
+            // Bind to this advisor if not yet assigned
+            if (existingAdvisorId == null) {
+                dsl.update(DSL.table("customers"))
+                        .set(DSL.field("advisor_id"), advisorId)
+                        .set(DSL.field("updated_at"), LocalDateTime.now())
+                        .where(DSL.field("id").eq(customerId))
+                        .execute();
+                log.info("Existing customer {} bound to advisor {} via QR scan", customerId, advisorId);
+            }
+        } else {
+            // Create new customer record
+            customerId = dsl.insertInto(DSL.table("customers"))
+                    .set(DSL.field("institution_id"), institutionId)
+                    .set(DSL.field("advisor_id"), advisorId)
+                    .set(DSL.field("wx_openid"), openid)
+                    .set(DSL.field("name"), "微信用户")
+                    .returning(DSL.field("id", Long.class))
+                    .fetchOne(DSL.field("id", Long.class));
+            customerName = "微信用户";
+            log.info("New customer {} created under advisor {} via QR scan", customerId, advisorId);
+        }
+
+        String token = jwtUtil.generateToken(customerId, institutionId, "CUSTOMER", null, "SELF");
+        return LoginResponse.builder()
+                .token(token)
+                .userId(customerId)
+                .name(customerName)
+                .role("CUSTOMER")
+                .institutionId(institutionId)
+                .advisorId(advisorId)
                 .build();
     }
 
@@ -240,6 +316,88 @@ public class AuthService {
                 .set(DSL.field("password_hash"), passwordEncoder.encode(request.getNewPassword()))
                 .where(DSL.field("id").eq(userId))
                 .execute();
+    }
+
+    // ── WeChat access token cache ────────────────────────────────────────────────
+    private final AtomicReference<String> cachedAccessToken = new AtomicReference<>();
+    private volatile long accessTokenExpiry = 0;
+
+    /**
+     * Generate a WeChat mini program QR code (wxacode) for an advisor's invite link.
+     * Scene parameter: "a={advisorId}" (≤32 chars).
+     * Returns PNG bytes from WeChat API, or throws if credentials are not configured.
+     */
+    @SuppressWarnings("unchecked")
+    public byte[] generateAdvisorInviteQrcode(Long advisorId) {
+        if (wxAppId.isBlank() || wxAppSecret.isBlank()) {
+            throw AppException.badRequest("微信凭证未配置，请联系管理员设置 WECHAT_APP_ID 和 WECHAT_APP_SECRET");
+        }
+        String accessToken = getWxAccessToken();
+        try {
+            String scene = "a=" + advisorId;
+            Map<String, Object> body = Map.of(
+                    "scene", scene,
+                    "page", "pages/index/index",
+                    "check_path", false,
+                    "env_version", "release"
+            );
+            byte[] png = webClientBuilder.build()
+                    .post()
+                    .uri("https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" + accessToken)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToMono(byte[].class)
+                    .block();
+            if (png == null || png.length == 0) {
+                throw AppException.internalError("微信二维码生成失败：空响应");
+            }
+            // WeChat returns JSON on error (not PNG), detect by checking magic bytes
+            if (png[0] == '{') {
+                String errMsg = new String(png, java.nio.charset.StandardCharsets.UTF_8);
+                log.error("WeChat QR code API error: {}", errMsg);
+                throw AppException.internalError("微信二维码生成失败：" + errMsg);
+            }
+            return png;
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to generate advisor invite QR code: {}", e.getMessage(), e);
+            throw AppException.internalError("二维码生成失败，请稍后重试");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getWxAccessToken() {
+        long now = System.currentTimeMillis();
+        if (cachedAccessToken.get() != null && now < accessTokenExpiry) {
+            return cachedAccessToken.get();
+        }
+        try {
+            String url = String.format(
+                    "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
+                    wxAppId, wxAppSecret);
+            Map<String, Object> result = webClientBuilder.build()
+                    .get()
+                    .uri(url)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (result == null || result.containsKey("errcode")) {
+                throw AppException.internalError("获取微信 access_token 失败：" + (result != null ? result.get("errmsg") : "无响应"));
+            }
+            String token = (String) result.get("access_token");
+            int expiresIn = ((Number) result.get("expires_in")).intValue();
+            cachedAccessToken.set(token);
+            // Refresh 5 minutes early
+            accessTokenExpiry = now + (expiresIn - 300) * 1000L;
+            return token;
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to get WeChat access token: {}", e.getMessage(), e);
+            throw AppException.internalError("微信服务暂时不可用");
+        }
     }
 
     @SuppressWarnings("unchecked")

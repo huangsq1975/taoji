@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AiAssistant from '../AiAssistant/AiAssistant'
+import InviteQrModal from '../InviteQrModal/InviteQrModal'
 import { getAuth, clearAuth, roleLabel, canAccessAdminPanel } from '../../utils/auth'
 import './Layout.css'
 
@@ -67,6 +68,7 @@ export default function Layout() {
   const crumbs = getBreadcrumb(location.pathname)
   const [aiOpen, setAiOpen] = useState(false)
   const handlePanelChange = useCallback((open: boolean) => setAiOpen(open), [])
+  const [showInviteQr, setShowInviteQr] = useState(false)
 
   const user = getAuth()
   const userName = user?.name ?? '未知用户'
@@ -92,6 +94,13 @@ export default function Layout() {
             <div className="sidebar-logo-main">韬纪元AI</div>
             <div className="sidebar-logo-sub">报告工作台</div>
           </div>
+        </div>
+
+        <div className="sidebar-invite">
+          <button className="sidebar-invite-btn" onClick={() => setShowInviteQr(true)}>
+            <span className="sidebar-invite-icon">📲</span>
+            <span>邀请客户</span>
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -149,6 +158,7 @@ export default function Layout() {
       </div>
 
       <AiAssistant onPanelChange={handlePanelChange} />
+      {showInviteQr && <InviteQrModal onClose={() => setShowInviteQr(false)} />}
     </div>
   )
 }

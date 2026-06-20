@@ -49,6 +49,35 @@
   font-size: 11px;
 }
 
+.sidebar-invite {
+  padding: 10px 12px 4px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.sidebar-invite-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: #1e3a5f;
+  border: 1px solid #2563eb44;
+  border-radius: 7px;
+  color: #93c5fd;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sidebar-invite-btn:hover {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.sidebar-invite-icon {
+  font-size: 15px;
+}
+
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
