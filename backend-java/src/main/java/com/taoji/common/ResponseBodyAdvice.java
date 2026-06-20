@@ -17,7 +17,7 @@ public class ResponseBodyAdvice implements org.springframework.web.servlet.mvc.m
     @Override
     public boolean supports(MethodParameter returnType,
                             Class<? extends HttpMessageConverter<?>> converterType) {
-        // Skip if already an ApiResponse
+        // Skip if already an ApiResponse or validation error
         return !ApiResponse.class.isAssignableFrom(returnType.getParameterType())
                 && !GlobalExceptionHandler.ValidationErrorResponse.class.isAssignableFrom(returnType.getParameterType());
     }
@@ -30,6 +30,17 @@ public class ResponseBodyAdvice implements org.springframework.web.servlet.mvc.m
                                    ServerHttpRequest request,
                                    ServerHttpResponse response) {
         if (body instanceof ApiResponse) {
+            return body;
+        }
+        // Skip binary responses (images, files, etc.)
+        if (selectedContentType != null && (
+                selectedContentType.isCompatibleWith(MediaType.IMAGE_PNG)
+                || selectedContentType.isCompatibleWith(MediaType.IMAGE_JPEG)
+                || selectedContentType.isCompatibleWith(MediaType.APPLICATION_OCTET_STREAM))) {
+            return body;
+        }
+        // Skip raw byte arrays regardless of content type
+        if (body instanceof byte[]) {
             return body;
         }
         // Skip springdoc/swagger endpoints
