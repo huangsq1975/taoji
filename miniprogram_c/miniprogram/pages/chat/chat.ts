@@ -1,6 +1,5 @@
 import { quickPills, getAiReply, ChatMessage } from '../../utils/mock'
-
-const API_BASE = 'http://localhost:3000/api/v1'
+import { API_BASE } from '../../utils/config'
 
 interface DocTypeOption {
   label: string

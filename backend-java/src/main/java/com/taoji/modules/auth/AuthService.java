@@ -11,6 +11,7 @@ import com.taoji.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
+import org.jooq.EnumType;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,9 +60,9 @@ public class AuthService {
 
         Long userId = userRecord.get(DSL.field("id", Long.class));
         Long institutionId = userRecord.get(DSL.field("institution_id", Long.class));
-        String role = userRecord.get(DSL.field("role", String.class));
+        String role = toEnumString(userRecord.get("role"));
         String phone = userRecord.get(DSL.field("phone", String.class));
-        String dataScope = userRecord.get(DSL.field("data_scope", String.class));
+        String dataScope = toEnumString(userRecord.get("data_scope"));
         String name = userRecord.get(DSL.field("name", String.class));
 
         // Update last_login_at
@@ -128,9 +129,9 @@ public class AuthService {
 
         Long userId = userRecord.get(DSL.field("id", Long.class));
         Long institutionId = userRecord.get(DSL.field("institution_id", Long.class));
-        String role = userRecord.get(DSL.field("role", String.class));
+        String role = toEnumString(userRecord.get("role"));
         String phone = userRecord.get(DSL.field("phone", String.class));
-        String dataScope = userRecord.get(DSL.field("data_scope", String.class));
+        String dataScope = toEnumString(userRecord.get("data_scope"));
         String name = userRecord.get(DSL.field("name", String.class));
 
         dsl.update(DSL.table("users"))
@@ -281,9 +282,9 @@ public class AuthService {
         }
 
         Long institutionId = userRecord.get(DSL.field("institution_id", Long.class));
-        String role = userRecord.get(DSL.field("role", String.class));
+        String role = toEnumString(userRecord.get("role"));
         String phone = userRecord.get(DSL.field("phone", String.class));
-        String dataScope = userRecord.get(DSL.field("data_scope", String.class));
+        String dataScope = toEnumString(userRecord.get("data_scope"));
         String name = userRecord.get(DSL.field("name", String.class));
 
         String institutionName = dsl.select(DSL.field("name", String.class))
@@ -338,8 +339,8 @@ public class AuthService {
                 "id", userRecord.get(DSL.field("id", Long.class)),
                 "name", userRecord.get(DSL.field("name", String.class)),
                 "phone", userRecord.get(DSL.field("phone", String.class)),
-                "role", userRecord.get(DSL.field("role", String.class)),
-                "dataScope", userRecord.get(DSL.field("data_scope", String.class)),
+                "role", toEnumString(userRecord.get("role")),
+                "dataScope", toEnumString(userRecord.get("data_scope")),
                 "institutionId", userRecord.get(DSL.field("institution_id", Long.class)),
                 "institutionName", userRecord.get(DSL.field("institution_name", String.class)),
                 "permissions", permissions
@@ -455,6 +456,13 @@ public class AuthService {
             log.error("Failed to get WeChat access token: {}", e.getMessage(), e);
             throw AppException.internalError("微信服务暂时不可用");
         }
+    }
+
+    private static String toEnumString(Object value) {
+        if (value instanceof EnumType enumType) {
+            return enumType.getLiteral();
+        }
+        return value != null ? value.toString() : null;
     }
 
     private String fetchWxOpenid(String code) {

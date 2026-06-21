@@ -9,6 +9,7 @@ import com.taoji.modules.users.dto.UpdatePermissionsRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
+import org.jooq.EnumType;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -282,8 +283,8 @@ public class UserService {
                 .institutionId(r.get(DSL.field("institution_id", Long.class)))
                 .name(r.get(DSL.field("name", String.class)))
                 .phone(r.get(DSL.field("phone", String.class)))
-                .role(r.get(DSL.field("role", String.class)))
-                .dataScope(r.get(DSL.field("data_scope", String.class)))
+                .role(toEnumString(r.get("role")))
+                .dataScope(toEnumString(r.get("data_scope")))
                 .status(Short.valueOf((short)1).equals(r.get(DSL.field("status", Short.class))) ? "ACTIVE" : "INACTIVE")
                 .lastLoginAt(toLocalDateTime(r.get("last_login_at")))
                 .createdAt(toLocalDateTime(r.get("created_at")))
@@ -296,5 +297,12 @@ public class UserService {
         if (val instanceof LocalDateTime ldt) return ldt;
         if (val instanceof java.sql.Timestamp ts) return ts.toLocalDateTime();
         return null;
+    }
+
+    private static String toEnumString(Object value) {
+        if (value instanceof EnumType enumType) {
+            return enumType.getLiteral();
+        }
+        return value != null ? value.toString() : null;
     }
 }

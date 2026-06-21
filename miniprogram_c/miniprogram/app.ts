@@ -1,5 +1,4 @@
-// Backend base URL — update this to your production domain
-const API_BASE = 'http://localhost:3000/api/v1'
+import { API_BASE } from './utils/config'
 
 App<IAppOption>({
   globalData: {
