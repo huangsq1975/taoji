@@ -166,8 +166,8 @@
         <text>拍照</text>
       </view>
       <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
-        <text class="sheet-icon">📄</text>
-        <text>手机本地文件</text>
+        <text class="sheet-icon">🖼️</text>
+        <text>手机相册</text>
       </view>
       <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
         <text class="sheet-icon">💬</text>
@@ -175,6 +175,30 @@
       </view>
       <view class="sheet-gap" />
       <view class="sheet-cancel" bindtap="onUploadSheetClose">
+        <text>取消</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Doc type selection sheet -->
+  <view wx:if="{{docTypeSheetVisible}}" class="sheet-mask" bindtap="onDocTypeSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="doc-type-header">
+        <text class="doc-type-title">选择文件类型</text>
+      </view>
+      <view
+        wx:for="{{docTypes}}"
+        wx:key="value"
+        class="sheet-item"
+        bindtap="onDocTypeSelect"
+        data-value="{{item.value}}"
+        data-label="{{item.label}}"
+      >
+        <text class="sheet-icon">{{item.icon}}</text>
+        <text>{{item.label}}</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onDocTypeSheetClose">
         <text>取消</text>
       </view>
     </view>

@@ -104,6 +104,57 @@ public class DocumentService {
         return getDocumentById(docId);
     }
 
+    @Transactional
+    public DocumentResponse uploadDocumentAsCustomer(JwtUserDetails currentUser, String docType, MultipartFile file) {
+        Long customerId = currentUser.getUserId();
+
+        Integer exists = dsl.selectCount()
+                .from(DSL.table("customers"))
+                .where(DSL.field("id").eq(customerId))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOneInto(Integer.class);
+        if (exists == null || exists == 0) {
+            throw AppException.notFound("客户不存在");
+        }
+
+        String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
+        String extension = getExtension(originalFilename);
+        String storedName = UUID.randomUUID() + extension;
+
+        String datePath = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        Path dirPath = Paths.get(uploadDir, String.valueOf(currentUser.getInstitutionId()), datePath);
+
+        try {
+            Files.createDirectories(dirPath);
+            Path filePath = dirPath.resolve(storedName);
+            try (InputStream is = file.getInputStream()) {
+                Files.copy(is, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            log.error("Failed to save file: {}", e.getMessage(), e);
+            throw AppException.internalError("文件保存失败");
+        }
+
+        String relativeUrl = "/" + currentUser.getInstitutionId() + "/" + datePath + "/" + storedName;
+        String fileUrl = urlPrefix + relativeUrl;
+
+        Long docId = dsl.insertInto(DSL.table("customer_documents"))
+                .set(DSL.field("customer_id"), customerId)
+                .set(DSL.field("uploader_id"), customerId)
+                .set(DSL.field("uploader_type"), "customer")
+                .set(DSL.field("doc_type"), docType)
+                .set(DSL.field("file_name"), originalFilename)
+                .set(DSL.field("file_url"), fileUrl)
+                .set(DSL.field("file_size"), file.getSize())
+                .set(DSL.field("mime_type"), file.getContentType())
+                .set(DSL.field("ai_parse_status"), "PENDING")
+                .set(DSL.field("created_at"), LocalDateTime.now())
+                .returningResult(DSL.field("id", Long.class))
+                .fetchOneInto(Long.class);
+
+        return getDocumentById(docId);
+    }
+
     public List<DocumentResponse> listDocuments(Long customerId) {
         return dsl.select()
                 .from(DSL.table("customer_documents"))

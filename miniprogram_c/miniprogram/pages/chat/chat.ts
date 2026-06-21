@@ -2,6 +2,23 @@ import { quickPills, getAiReply, ChatMessage } from '../../utils/mock'
 
 const API_BASE = 'http://localhost:3000/api/v1'
 
+interface DocTypeOption {
+  label: string
+  value: string
+  icon: string
+}
+
+const DOC_TYPES: DocTypeOption[] = [
+  { label: '营业执照', value: 'BUSINESS_LICENSE', icon: '🏢' },
+  { label: '银行流水', value: 'BANK_STATEMENT', icon: '🏦' },
+  { label: '征信报告', value: 'CREDIT_REPORT', icon: '📊' },
+  { label: '税务发票', value: 'TAX_INVOICE', icon: '🧾' },
+  { label: '房产证', value: 'PROPERTY_CERT', icon: '🏠' },
+  { label: '身份证', value: 'ID_CARD', icon: '💳' },
+  { label: '财务报表', value: 'FINANCIAL_STATEMENT', icon: '📈' },
+  { label: '其他', value: 'OTHER', icon: '📎' },
+]
+
 interface AdvisorItem {
   id: number
   name: string
@@ -24,6 +41,11 @@ Page({
     inputValue: '',
     sidebarVisible: false,
     uploadSheetVisible: false,
+    docTypeSheetVisible: false,
+    docTypes: DOC_TYPES,
+    pendingFilePath: '',
+    pendingFileName: '',
+    uploading: false,
     advisorSheetVisible: false,
     advisorList: [] as AdvisorItem[],
     advisorPickerRange: [] as string[],
@@ -177,6 +199,56 @@ Page({
     }, 600)
   },
 
+  // ─── Upload flow ────────────────────────────────────────────────────────────
+
+  onDocTypeSheetClose() {
+    this.setData({ docTypeSheetVisible: false, pendingFilePath: '', pendingFileName: '' })
+  },
+
+  onDocTypeSelect(e: WechatMiniprogram.TouchEvent) {
+    const docType = e.currentTarget.dataset['value'] as string
+    const docLabel = e.currentTarget.dataset['label'] as string
+    const filePath = this.data.pendingFilePath
+    const fileName = this.data.pendingFileName
+
+    this.setData({ docTypeSheetVisible: false, uploading: true })
+    this.addMessage('user', `[上传中] ${docLabel} · ${fileName}`)
+
+    const token = wx.getStorageSync('token') as string
+    wx.uploadFile({
+      url: `${API_BASE}/c/documents/upload`,
+      filePath,
+      name: 'file',
+      formData: { docType },
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.UploadFileSuccessCallbackResult) => {
+        this.setData({ uploading: false, pendingFilePath: '', pendingFileName: '' })
+        let parsed: { statusCode?: number } = {}
+        try {
+          parsed = JSON.parse(res.data) as { statusCode?: number }
+        } catch {
+          // ignore parse error, check http status only
+        }
+        if (res.statusCode === 200 && parsed.statusCode === 200) {
+          const id = genId()
+          const reply: ChatMessage = {
+            id,
+            role: 'ai',
+            content: `${docLabel}已上传成功，AI 正在解析，结果将同步给您的顾问。`,
+            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          }
+          this.setData({ messages: [...this.data.messages, reply], scrollToId: id })
+        } else {
+          wx.showToast({ title: '上传失败，请重试', icon: 'none' })
+        }
+      },
+      fail: () => {
+        this.setData({ uploading: false, pendingFilePath: '', pendingFileName: '' })
+        wx.showToast({ title: '上传失败，请检查网络', icon: 'none' })
+      },
+    })
+  },
+
   onNewChat() {
     this.setData({ messages: [], sidebarVisible: false })
   },
@@ -200,18 +272,44 @@ Page({
   onUploadChoose(e: WechatMiniprogram.TouchEvent) {
     const type = e.currentTarget.dataset['type'] as string
     this.setData({ uploadSheetVisible: false })
-    const labels: Record<string, string> = {
-      camera: '拍照上传',
-      local: '手机本地文件',
-      wechat: '从微信聊天记录中选择',
+
+    const showDocTypeSheet = (filePath: string, fileName: string) => {
+      this.setData({ pendingFilePath: filePath, pendingFileName: fileName, docTypeSheetVisible: true })
     }
-    const names: Record<string, string> = {
-      camera: '现场拍照_营业执照.jpg',
-      local: '企业经营流水_2026.pdf',
-      wechat: '微信收到_征信报告截图.png',
+
+    if (type === 'camera') {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['camera'],
+        success: (res: WechatMiniprogram.ChooseMediaSuccessCallbackResult) => {
+          const f = res.tempFiles[0]
+          showDocTypeSheet(f.tempFilePath, `拍照_${Date.now()}.jpg`)
+        },
+        fail: () => { /* user cancelled */ },
+      })
+    } else if (type === 'local') {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album'],
+        success: (res: WechatMiniprogram.ChooseMediaSuccessCallbackResult) => {
+          const f = res.tempFiles[0]
+          showDocTypeSheet(f.tempFilePath, `图片_${Date.now()}.jpg`)
+        },
+        fail: () => { /* user cancelled */ },
+      })
+    } else if (type === 'wechat') {
+      wx.chooseMessageFile({
+        count: 1,
+        type: 'file',
+        success: (res: WechatMiniprogram.ChooseMessageFileSuccessCallbackResult) => {
+          const f = res.tempFiles[0]
+          showDocTypeSheet(f.path, f.name)
+        },
+        fail: () => { /* user cancelled */ },
+      })
     }
-    this.addMessage('user', `[${labels[type] !== undefined ? labels[type] : type}] ${names[type] !== undefined ? names[type] : '文件'}`)
-    this.replyAI('upload')
   },
 
   onProgressTap() {
