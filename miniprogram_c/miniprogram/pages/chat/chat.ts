@@ -42,7 +42,7 @@ Page({
       this.setData({ userName: user.name })
     }
     // If login already completed, check immediately; otherwise register callback
-    if (app.globalData.token) {
+    if (app.globalData.loginDone) {
       this.checkAndShowAdvisorSheet()
     } else {
       app.loginReadyCallback = () => {
@@ -54,9 +54,8 @@ Page({
   checkAndShowAdvisorSheet() {
     if (!app.globalData.needsAdvisorSelection) return
     wx.request({
-      url: `${API_BASE}/advisors`,
+      url: `${API_BASE}/c/advisors`,
       method: 'GET',
-      header: { Authorization: `Bearer ${app.globalData.token}` },
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
         const payload = res.data as { data?: AdvisorItem[] }
         const list = payload.data || []
@@ -81,26 +80,42 @@ Page({
     }
     const advisor = this.data.advisorList[idx]
     wx.showLoading({ title: '绑定中...' })
-    wx.request({
-      url: `${API_BASE}/auth/bind-advisor`,
-      method: 'POST',
-      header: { Authorization: `Bearer ${app.globalData.token}` },
-      data: { advisorId: advisor.id },
-      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
-        wx.hideLoading()
-        const payload = res.data as { data?: { customerId?: number; advisorId?: number } }
-        const data = payload.data
-        app.globalData.advisorId = (data && data.advisorId != null) ? data.advisorId : advisor.id
-        if (data && data.customerId != null) {
-          app.globalData.customerId = data.customerId
-        }
-        app.globalData.needsAdvisorSelection = false
-        this.setData({ advisorSheetVisible: false })
-        wx.showToast({ title: '已绑定顾问', icon: 'success' })
+    // Obtain a fresh wx code (the original one was consumed at app launch)
+    wx.login({
+      success: (wxRes) => {
+        wx.request({
+          url: `${API_BASE}/auth/wx-login`,
+          method: 'POST',
+          data: { code: wxRes.code, advisorId: advisor.id },
+          success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+            wx.hideLoading()
+            const payload = res.data as {
+              data?: { token?: string; userId?: number; name?: string; advisorId?: number }
+            }
+            const data = payload.data
+            if (data && data.token) {
+              wx.setStorageSync('token', data.token)
+              app.globalData.token = data.token
+              app.globalData.customerId = data.userId != null ? data.userId : null
+              app.globalData.advisorId = data.advisorId != null ? data.advisorId : advisor.id
+              app.globalData.userInfo.name = data.name || '微信用户'
+              app.globalData.userInfo.isLoggedIn = true
+              app.globalData.needsAdvisorSelection = false
+              this.setData({ advisorSheetVisible: false, userName: app.globalData.userInfo.name })
+              wx.showToast({ title: '已绑定顾问', icon: 'success' })
+            } else {
+              wx.showToast({ title: '绑定失败，请重试', icon: 'none' })
+            }
+          },
+          fail: () => {
+            wx.hideLoading()
+            wx.showToast({ title: '绑定失败，请重试', icon: 'none' })
+          },
+        })
       },
       fail: () => {
         wx.hideLoading()
-        wx.showToast({ title: '绑定失败，请重试', icon: 'none' })
+        wx.showToast({ title: '微信授权失败，请重试', icon: 'none' })
       },
     })
   },

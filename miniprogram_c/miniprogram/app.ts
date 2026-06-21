@@ -12,6 +12,7 @@ App<IAppOption>({
     advisorId: null as number | null,
     token: null as string | null,
     needsAdvisorSelection: false,
+    loginDone: false,
   },
   loginReadyCallback: null as (() => void) | null,
   onLaunch(options: WechatMiniprogram.App.LaunchShowOption) {
@@ -48,7 +49,11 @@ App<IAppOption>({
               this.globalData.userInfo.name = data.name || '微信用户'
               this.globalData.userInfo.isLoggedIn = true
               this.globalData.needsAdvisorSelection = this.globalData.advisorId === null
+            } else {
+              // Backend returned null data — new user with no linked account, prompt advisor selection
+              this.globalData.needsAdvisorSelection = true
             }
+            this.globalData.loginDone = true
             if (this.loginReadyCallback) {
               this.loginReadyCallback()
               this.loginReadyCallback = null

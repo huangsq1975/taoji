@@ -116,8 +116,10 @@ public class AuthService {
                         .where(DSL.field("id").eq(request.getCustomerId()))
                         .execute();
             }
-            // For C-end mini program, return a limited guest token
-            throw AppException.notFound("未找到关联的用户账号，请联系您的贷款顾问");
+            // New user with no linked account and no advisor — return null so the
+            // client can prompt the user to select an advisor from the list.
+            log.info("New WeChat user (openid={}) has no account; prompting advisor selection", openid);
+            return null;
         }
 
         Long userId = userRecord.get(DSL.field("id", Long.class));
