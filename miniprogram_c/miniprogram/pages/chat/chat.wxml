@@ -130,28 +130,28 @@
   </view>
 
   <!-- Advisor selection sheet -->
-  <view wx:if="{{advisorSheetVisible}}" class="sheet-mask">
-    <view class="sheet advisor-sheet" catchtap="">
+  <view wx:if="{{advisorSheetVisible}}" class="advisor-sheet-mask">
+    <view class="advisor-sheet" catchtap="">
       <view class="advisor-sheet-title">请选择您的顾问</view>
       <view class="advisor-sheet-sub">选择后将为您创建账号并绑定顾问</view>
-      <scroll-view scroll-y class="advisor-list">
-        <view
-          wx:for="{{advisorList}}"
-          wx:key="id"
-          class="advisor-item {{selectedAdvisorIdx === index ? 'advisor-item-selected' : ''}}"
-          bindtap="onAdvisorItemTap"
-          data-idx="{{index}}"
-        >
-          <view class="advisor-avatar">
-            <text class="advisor-avatar-text">{{item.name[0]}}</text>
-          </view>
-          <view class="advisor-info">
-            <text class="advisor-name">{{item.name}}</text>
-            <text class="advisor-role">{{item.role}}</text>
-          </view>
-          <view wx:if="{{selectedAdvisorIdx === index}}" class="advisor-check">✓</view>
+      <view wx:if="{{advisorList.length === 0}}" class="advisor-empty">
+        <text>暂无可用顾问，请稍后重试</text>
+      </view>
+      <picker
+        wx:else
+        mode="selector"
+        range="{{advisorPickerRange}}"
+        value="{{selectedAdvisorIdx >= 0 ? selectedAdvisorIdx : 0}}"
+        bindchange="onAdvisorPickerChange"
+      >
+        <view class="advisor-picker">
+          <text class="advisor-picker-label">顾问</text>
+          <text class="advisor-picker-value {{selectedAdvisorIdx < 0 ? 'is-placeholder' : ''}}">
+            {{selectedAdvisorIdx >= 0 ? advisorPickerRange[selectedAdvisorIdx] : '点击选择顾问'}}
+          </text>
+          <text class="advisor-picker-arrow">▼</text>
         </view>
-      </scroll-view>
+      </picker>
       <view class="advisor-confirm-btn {{selectedAdvisorIdx >= 0 ? 'advisor-confirm-btn-active' : ''}}" bindtap="onAdvisorConfirm">
         <text>确定</text>
       </view>

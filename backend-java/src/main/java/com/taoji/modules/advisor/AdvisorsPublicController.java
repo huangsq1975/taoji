@@ -1,11 +1,13 @@
 package com.taoji.modules.advisor;
 
 import com.taoji.common.ApiResponse;
+import com.taoji.jooq.enums.UserRole;
+import com.taoji.jooq.tables.Institutions;
+import com.taoji.jooq.tables.Users;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
-import org.jooq.impl.DSL;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,19 +33,21 @@ public class AdvisorsPublicController {
             description = "返回平台所有在职顾问，供新客户未绑定顾问时选择"
     )
     public ApiResponse<List<Map<String, Object>>> listAdvisors() {
+        Users u = Users.USERS.as("u");
+        Institutions i = Institutions.INSTITUTIONS.as("i");
+
         List<Map<String, Object>> advisors = dsl
                 .select(
-                        DSL.field("u.id").as("id"),
-                        DSL.field("u.name").as("name"),
-                        DSL.field("u.role").as("role"),
-                        DSL.field("i.name").as("institutionName"))
-                .from(DSL.table("users").as("u"))
-                .join(DSL.table("institutions").as("i"))
-                .on(DSL.field("u.institution_id").eq(DSL.field("i.id")))
-                .where(DSL.field("u.role").in("ADVISOR", "SUPERVISOR"))
-                .and(DSL.field("u.status").eq((short) 1))
-                .and(DSL.field("u.deleted_at").isNull())
-                .orderBy(DSL.field("u.name").asc())
+                        u.ID.as("id"),
+                        u.NAME.as("name"),
+                        u.ROLE.as("role"),
+                        i.NAME.as("institutionName"))
+                .from(u)
+                .join(i).on(u.INSTITUTION_ID.eq(i.ID))
+                .where(u.ROLE.in(UserRole.ADVISOR, UserRole.SUPERVISOR))
+                .and(u.STATUS.eq((short) 1))
+                .and(u.DELETED_AT.isNull())
+                .orderBy(u.NAME.asc())
                 .fetchMaps();
 
         return ApiResponse.ok(advisors);

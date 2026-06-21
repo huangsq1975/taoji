@@ -108,6 +108,10 @@ public class AuthService {
                 .fetchOne();
 
         if (userRecord == null) {
+            LoginResponse customerLogin = wxLoginExistingCustomer(openid);
+            if (customerLogin != null) {
+                return customerLogin;
+            }
             // Try to match customer and auto-associate if customerId provided
             if (request.getCustomerId() != null) {
                 // Update customer with wx_openid
@@ -154,7 +158,48 @@ public class AuthService {
     }
 
     /**
-     * Customer scanned an advisor's invite QR code.
+     * Returning C-end customer login (no advisorId in request).
+     * Returns null if no customer exists, or customer exists but has no advisor yet.
+     */
+    private LoginResponse wxLoginExistingCustomer(String openid) {
+        Record existing = dsl.select(
+                        DSL.field("id", Long.class),
+                        DSL.field("institution_id", Long.class),
+                        DSL.field("advisor_id", Long.class),
+                        DSL.field("name", String.class))
+                .from(DSL.table("customers"))
+                .where(DSL.field("wx_openid").eq(openid))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOne();
+
+        if (existing == null) {
+            return null;
+        }
+
+        Long customerId = existing.get(DSL.field("id", Long.class));
+        Long institutionId = existing.get(DSL.field("institution_id", Long.class));
+        Long advisorId = existing.get(DSL.field("advisor_id", Long.class));
+        String customerName = existing.get(DSL.field("name", String.class));
+
+        if (advisorId == null) {
+            log.info("Customer {} has no advisor yet; prompting advisor selection", customerId);
+            return null;
+        }
+
+        String token = jwtUtil.generateToken(customerId, institutionId, "CUSTOMER", null, "SELF");
+        log.info("Customer {} logged in with advisor {}", customerId, advisorId);
+        return LoginResponse.builder()
+                .token(token)
+                .userId(customerId)
+                .name(customerName)
+                .role("CUSTOMER")
+                .institutionId(institutionId)
+                .advisorId(advisorId)
+                .build();
+    }
+
+    /**
+     * Customer scanned an advisor's invite QR code, or manually selected an advisor.
      * Find or create a customer record and return a CUSTOMER-role JWT.
      */
     private LoginResponse wxLoginAsCustomer(String openid, Long advisorId) {

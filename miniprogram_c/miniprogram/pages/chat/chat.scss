@@ -366,11 +366,30 @@
 }
 
 /* Advisor selection sheet */
+.advisor-sheet-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+
 .advisor-sheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx;
   padding: 40rpx 0 0;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .advisor-sheet-title {
@@ -385,72 +404,56 @@
   font-size: 24rpx;
   color: #94a3b8;
   text-align: center;
-  padding: 0 40rpx 24rpx;
+  padding: 0 40rpx 32rpx;
 }
 
-.advisor-list {
-  flex: 1;
-  min-height: 0;
-  max-height: 480rpx;
-  padding: 0 24rpx;
+.advisor-empty {
+  margin: 0 40rpx 32rpx;
+  padding: 48rpx 24rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #94a3b8;
+  background: #f8fbff;
+  border-radius: 16rpx;
 }
 
-.advisor-item {
+.advisor-picker {
+  margin: 0 40rpx 32rpx;
+  padding: 28rpx 32rpx;
+  border: 2rpx solid #dde7f3;
+  border-radius: 16rpx;
+  background: #f8fbff;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 24rpx;
-  padding: 24rpx 20rpx;
-  border-radius: 16rpx;
-  margin-bottom: 12rpx;
-  background: #f8fbff;
-  border: 2rpx solid transparent;
+  gap: 16rpx;
 }
 
-.advisor-item-selected {
-  background: #eff6ff;
-  border-color: #185FA5;
-}
-
-.advisor-avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 50%;
-  background: #dde7f3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.advisor-picker-label {
+  font-size: 28rpx;
+  color: #64748b;
   flex-shrink: 0;
 }
 
-.advisor-avatar-text {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #185FA5;
-}
-
-.advisor-info {
+.advisor-picker-value {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6rpx;
-}
-
-.advisor-name {
   font-size: 30rpx;
-  font-weight: 600;
   color: #172033;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.advisor-role {
-  font-size: 24rpx;
-  color: #64748b;
+.advisor-picker-value.is-placeholder {
+  color: #94a3b8;
+  font-weight: 400;
 }
 
-.advisor-check {
-  font-size: 32rpx;
-  color: #185FA5;
-  font-weight: 700;
+.advisor-picker-arrow {
+  font-size: 22rpx;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .advisor-confirm-btn {

@@ -6,6 +6,7 @@ interface AdvisorItem {
   id: number
   name: string
   role: string
+  institutionName?: string
 }
 
 const app = getApp<IAppOption>()
@@ -25,6 +26,7 @@ Page({
     uploadSheetVisible: false,
     advisorSheetVisible: false,
     advisorList: [] as AdvisorItem[],
+    advisorPickerRange: [] as string[],
     selectedAdvisorIdx: -1,
     scrollToId: '',
     statusBarHeight: 0,
@@ -57,9 +59,21 @@ Page({
       url: `${API_BASE}/c/advisors`,
       method: 'GET',
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
-        const payload = res.data as { data?: AdvisorItem[] }
+        const payload = res.data as { data?: AdvisorItem[]; statusCode?: number }
+        if (payload.statusCode && payload.statusCode !== 200) {
+          wx.showToast({ title: '获取顾问列表失败', icon: 'none' })
+          return
+        }
         const list = payload.data || []
-        this.setData({ advisorList: list, advisorSheetVisible: true })
+        const range = list.map((a) =>
+          a.institutionName ? `${a.name}（${a.institutionName}）` : a.name,
+        )
+        this.setData({
+          advisorList: list,
+          advisorPickerRange: range,
+          selectedAdvisorIdx: -1,
+          advisorSheetVisible: true,
+        })
       },
       fail: () => {
         wx.showToast({ title: '获取顾问列表失败', icon: 'none' })
@@ -67,8 +81,8 @@ Page({
     })
   },
 
-  onAdvisorItemTap(e: WechatMiniprogram.TouchEvent) {
-    const idx = e.currentTarget.dataset['idx'] as number
+  onAdvisorPickerChange(e: WechatMiniprogram.PickerChange) {
+    const idx = Number(e.detail.value)
     this.setData({ selectedAdvisorIdx: idx })
   },
 
