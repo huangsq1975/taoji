@@ -1,5 +1,10 @@
 package com.taoji.modules.dashboard;
 
+import com.taoji.jooq.tables.BankProducts;
+import com.taoji.jooq.tables.Banks;
+import com.taoji.jooq.tables.Customers;
+import com.taoji.jooq.tables.ReportTasks;
+import com.taoji.jooq.tables.Users;
 import com.taoji.security.JwtUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,22 +100,24 @@ public class DashboardService {
                 .toList();
 
         // 6. 最近AI填表任务（最多3条，排除已导出）
+        var rt = ReportTasks.REPORT_TASKS.as("rt");
+        var c = Customers.CUSTOMERS.as("c");
+        var bp = BankProducts.BANK_PRODUCTS.as("bp");
+        var b = Banks.BANKS.as("b");
+        var u = Users.USERS.as("u");
+
         List<Map<String, Object>> recentTasks = dsl.select(
-                        DSL.field("rt.*"),
-                        DSL.field("c.name").as("customer_name"),
-                        DSL.field("bp.name").as("product_name"),
-                        DSL.field("b.short_name").as("bank_short_name"),
-                        DSL.field("u.name").as("advisor_name")
+                        rt.asterisk(),
+                        c.NAME.as("customer_name"),
+                        bp.NAME.as("product_name"),
+                        b.SHORT_NAME.as("bank_short_name"),
+                        u.NAME.as("advisor_name")
                 )
-                .from(DSL.table("report_tasks").as("rt"))
-                .join(DSL.table("customers").as("c"))
-                .on(DSL.field("rt.customer_id").eq(DSL.field("c.id")))
-                .join(DSL.table("bank_products").as("bp"))
-                .on(DSL.field("rt.product_id").eq(DSL.field("bp.id")))
-                .join(DSL.table("banks").as("b"))
-                .on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
-                .leftJoin(DSL.table("users").as("u"))
-                .on(DSL.field("rt.advisor_id").eq(DSL.field("u.id")))
+                .from(rt)
+                .join(c).on(rt.CUSTOMER_ID.eq(c.ID))
+                .join(bp).on(rt.PRODUCT_ID.eq(bp.ID))
+                .join(b).on(bp.BANK_ID.eq(b.ID))
+                .leftJoin(u).on(rt.ADVISOR_ID.eq(u.ID))
                 .where(DSL.field("rt.institution_id").eq(institutionId))
                 .and(DSL.field("rt.status::text").notEqual("EXPORTED"))
                 .orderBy(DSL.field("rt.updated_at").desc())

@@ -3,6 +3,11 @@ package com.taoji.modules.reports;
 import com.taoji.common.AppException;
 import com.taoji.common.PageRequest;
 import com.taoji.common.PaginatedResult;
+import com.taoji.jooq.tables.BankProducts;
+import com.taoji.jooq.tables.Banks;
+import com.taoji.jooq.tables.Customers;
+import com.taoji.jooq.tables.ReportTasks;
+import com.taoji.jooq.tables.Users;
 import com.taoji.modules.reports.dto.CreateReportTaskRequest;
 import com.taoji.modules.reports.dto.ReviewFieldRequest;
 import com.taoji.security.JwtUserDetails;
@@ -54,18 +59,24 @@ public class ReportService {
                 .where(condition)
                 .fetchOneInto(Integer.class);
 
+        var rt = ReportTasks.REPORT_TASKS.as("rt");
+        var c = Customers.CUSTOMERS.as("c");
+        var bp = BankProducts.BANK_PRODUCTS.as("bp");
+        var b = Banks.BANKS.as("b");
+        var u = Users.USERS.as("u");
+
         List<Map<String, Object>> tasks = dsl.select(
-                        DSL.field("rt.*"),
-                        DSL.field("c.name").as("customer_name"),
-                        DSL.field("bp.name").as("product_name"),
-                        DSL.field("b.short_name").as("bank_short_name"),
-                        DSL.field("u.name").as("advisor_name")
+                        rt.asterisk(),
+                        c.NAME.as("customer_name"),
+                        bp.NAME.as("product_name"),
+                        b.SHORT_NAME.as("bank_short_name"),
+                        u.NAME.as("advisor_name")
                 )
-                .from(DSL.table("report_tasks").as("rt"))
-                .join(DSL.table("customers").as("c")).on(DSL.field("rt.customer_id").eq(DSL.field("c.id")))
-                .join(DSL.table("bank_products").as("bp")).on(DSL.field("rt.product_id").eq(DSL.field("bp.id")))
-                .join(DSL.table("banks").as("b")).on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
-                .leftJoin(DSL.table("users").as("u")).on(DSL.field("rt.advisor_id").eq(DSL.field("u.id")))
+                .from(rt)
+                .join(c).on(rt.CUSTOMER_ID.eq(c.ID))
+                .join(bp).on(rt.PRODUCT_ID.eq(bp.ID))
+                .join(b).on(bp.BANK_ID.eq(b.ID))
+                .leftJoin(u).on(rt.ADVISOR_ID.eq(u.ID))
                 .where(condition)
                 .orderBy(DSL.field("rt.created_at").desc())
                 .limit(pageRequest.getPageSize())
@@ -93,7 +104,7 @@ public class ReportService {
                 .set(DSL.field("customer_id"), request.getCustomerId())
                 .set(DSL.field("advisor_id"), currentUser.getUserId())
                 .set(DSL.field("product_id"), request.getProductId())
-                .set(DSL.field("status"), "PENDING")
+                .set(DSL.field("status", String.class), DSL.field("?::report_status", String.class, "PENDING"))
                 .set(DSL.field("issue_count"), 0)
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .set(DSL.field("updated_at"), LocalDateTime.now())
@@ -104,16 +115,21 @@ public class ReportService {
     }
 
     public Map<String, Object> getReportTask(JwtUserDetails currentUser, Long taskId) {
+        var rt = ReportTasks.REPORT_TASKS.as("rt");
+        var c = Customers.CUSTOMERS.as("c");
+        var bp = BankProducts.BANK_PRODUCTS.as("bp");
+        var b = Banks.BANKS.as("b");
+
         Map<String, Object> task = dsl.select(
-                        DSL.field("rt.*"),
-                        DSL.field("c.name").as("customer_name"),
-                        DSL.field("bp.name").as("product_name"),
-                        DSL.field("b.short_name").as("bank_short_name")
+                        rt.asterisk(),
+                        c.NAME.as("customer_name"),
+                        bp.NAME.as("product_name"),
+                        b.SHORT_NAME.as("bank_short_name")
                 )
-                .from(DSL.table("report_tasks").as("rt"))
-                .join(DSL.table("customers").as("c")).on(DSL.field("rt.customer_id").eq(DSL.field("c.id")))
-                .join(DSL.table("bank_products").as("bp")).on(DSL.field("rt.product_id").eq(DSL.field("bp.id")))
-                .join(DSL.table("banks").as("b")).on(DSL.field("bp.bank_id").eq(DSL.field("b.id")))
+                .from(rt)
+                .join(c).on(rt.CUSTOMER_ID.eq(c.ID))
+                .join(bp).on(rt.PRODUCT_ID.eq(bp.ID))
+                .join(b).on(bp.BANK_ID.eq(b.ID))
                 .where(DSL.field("rt.id").eq(taskId))
                 .and(DSL.field("rt.institution_id").eq(currentUser.getInstitutionId()))
                 .fetchOneMap();
@@ -182,7 +198,7 @@ public class ReportService {
 
         // Update status to EXPORTING
         dsl.update(DSL.table("report_tasks"))
-                .set(DSL.field("status"), "EXPORTING")
+                .set(DSL.field("status", String.class), DSL.field("?::report_status", String.class, "EXPORTING"))
                 .set(DSL.field("updated_at"), LocalDateTime.now())
                 .where(DSL.field("id").eq(taskId))
                 .execute();
@@ -198,7 +214,7 @@ public class ReportService {
         String exportUrl = createZipExport(currentUser.getInstitutionId(), taskId, task, fields);
 
         dsl.update(DSL.table("report_tasks"))
-                .set(DSL.field("status"), "EXPORTED")
+                .set(DSL.field("status", String.class), DSL.field("?::report_status", String.class, "EXPORTED"))
                 .set(DSL.field("export_url"), exportUrl)
                 .set(DSL.field("exported_at"), LocalDateTime.now())
                 .set(DSL.field("updated_at"), LocalDateTime.now())

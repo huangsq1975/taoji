@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
+import org.jooq.EnumType;
+import org.jooq.Field;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -90,13 +93,13 @@ public class DocumentService {
         Long docId = dsl.insertInto(DSL.table("customer_documents"))
                 .set(DSL.field("customer_id"), customerId)
                 .set(DSL.field("uploader_id"), currentUser.getUserId())
-                .set(DSL.field("uploader_type"), "advisor")
-                .set(DSL.field("doc_type"), docType)
+                .set(DSL.field("uploader_type", String.class), DSL.field("?::uploader_type", String.class, "advisor"))
+                .set(DSL.field("doc_type", String.class), DSL.field("?::doc_type", String.class, docType))
                 .set(DSL.field("file_name"), originalFilename)
                 .set(DSL.field("file_url"), fileUrl)
                 .set(DSL.field("file_size"), file.getSize())
                 .set(DSL.field("mime_type"), file.getContentType())
-                .set(DSL.field("ai_parse_status"), "PENDING")
+                .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "PENDING"))
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
                 .fetchOneInto(Long.class);
@@ -141,13 +144,13 @@ public class DocumentService {
         Long docId = dsl.insertInto(DSL.table("customer_documents"))
                 .set(DSL.field("customer_id"), customerId)
                 .set(DSL.field("uploader_id"), customerId)
-                .set(DSL.field("uploader_type"), "customer")
-                .set(DSL.field("doc_type"), docType)
+                .set(DSL.field("uploader_type", String.class), DSL.field("?::uploader_type", String.class, "customer"))
+                .set(DSL.field("doc_type", String.class), DSL.field("?::doc_type", String.class, docType))
                 .set(DSL.field("file_name"), originalFilename)
                 .set(DSL.field("file_url"), fileUrl)
                 .set(DSL.field("file_size"), file.getSize())
                 .set(DSL.field("mime_type"), file.getContentType())
-                .set(DSL.field("ai_parse_status"), "PENDING")
+                .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "PENDING"))
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
                 .fetchOneInto(Long.class);
@@ -186,24 +189,7 @@ public class DocumentService {
                 .where(condition)
                 .fetchOneInto(Long.class);
 
-        List<DocumentResponse> items = dsl.select(
-                        DSL.field("d.id"),
-                        DSL.field("d.customer_id"),
-                        DSL.field("d.uploader_id"),
-                        DSL.field("d.uploader_type"),
-                        DSL.field("d.doc_type"),
-                        DSL.field("d.ai_doc_type"),
-                        DSL.field("d.file_name"),
-                        DSL.field("d.file_url"),
-                        DSL.field("d.file_size"),
-                        DSL.field("d.mime_type"),
-                        DSL.field("d.ai_parse_status"),
-                        DSL.field("d.confidence"),
-                        DSL.field("d.ai_parsed_at"),
-                        DSL.field("d.created_at"),
-                        DSL.field("c.name").as("customer_name"),
-                        DSL.field("u.name").as("uploader_name")
-                )
+        List<DocumentResponse> items = dsl.select(documentWithJoinFields())
                 .from(DSL.table("customer_documents").as("d"))
                 .join(DSL.table("customers").as("c")).on(DSL.field("d.customer_id").eq(DSL.field("c.id")))
                 .leftJoin(DSL.table("users").as("u")).on(DSL.field("d.uploader_id").eq(DSL.field("u.id")))
@@ -260,9 +246,9 @@ public class DocumentService {
         verifyCustomerAccess(currentUser, doc.get(DSL.field("customer_id", Long.class)));
 
         var step = dsl.update(DSL.table("customer_documents"))
-                .set(DSL.field("ai_parse_status"), "DONE");
+                .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "DONE"));
         if (newDocType != null && !newDocType.isBlank()) {
-            step = step.set(DSL.field("doc_type"), newDocType);
+            step = step.set(DSL.field("doc_type", String.class), DSL.field("?::doc_type", String.class, newDocType));
         }
         step.where(DSL.field("id").eq(docId)).execute();
 
@@ -287,16 +273,16 @@ public class DocumentService {
                 .set(DSL.field("institution_id"), currentUser.getInstitutionId())
                 .set(DSL.field("customer_id"), customerId)
                 .set(DSL.field("trigger_user_id"), currentUser.getUserId())
-                .set(DSL.field("scope"), "reparse")
+                .set(DSL.field("scope", String.class), DSL.field("?::recognition_scope", String.class, "reparse"))
                 .set(DSL.field("document_ids"), DSL.field("?::jsonb", String.class, "[" + docId + "]"))
-                .set(DSL.field("status"), "QUEUED")
+                .set(DSL.field("status", String.class), DSL.field("?::recognition_status", String.class, "QUEUED"))
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
                 .fetchOneInto(Long.class);
 
         // Reset document status
         dsl.update(DSL.table("customer_documents"))
-                .set(DSL.field("ai_parse_status"), "PENDING")
+                .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "PENDING"))
                 .set(DSL.field("ai_parsed_at"), (LocalDateTime) null)
                 .set(DSL.field("confidence"), (BigDecimal) null)
                 .where(DSL.field("id").eq(docId))
@@ -378,24 +364,7 @@ public class DocumentService {
     }
 
     private DocumentResponse getDocumentByIdWithJoins(Long docId) {
-        Record r = dsl.select(
-                        DSL.field("d.id"),
-                        DSL.field("d.customer_id"),
-                        DSL.field("d.uploader_id"),
-                        DSL.field("d.uploader_type"),
-                        DSL.field("d.doc_type"),
-                        DSL.field("d.ai_doc_type"),
-                        DSL.field("d.file_name"),
-                        DSL.field("d.file_url"),
-                        DSL.field("d.file_size"),
-                        DSL.field("d.mime_type"),
-                        DSL.field("d.ai_parse_status"),
-                        DSL.field("d.confidence"),
-                        DSL.field("d.ai_parsed_at"),
-                        DSL.field("d.created_at"),
-                        DSL.field("c.name").as("customer_name"),
-                        DSL.field("u.name").as("uploader_name")
-                )
+        Record r = dsl.select(documentWithJoinFields())
                 .from(DSL.table("customer_documents").as("d"))
                 .join(DSL.table("customers").as("c")).on(DSL.field("d.customer_id").eq(DSL.field("c.id")))
                 .leftJoin(DSL.table("users").as("u")).on(DSL.field("d.uploader_id").eq(DSL.field("u.id")))
@@ -405,22 +374,43 @@ public class DocumentService {
         return mapToResponseWithJoins(r);
     }
 
+    private Field<?>[] documentWithJoinFields() {
+        return new Field<?>[]{
+                DSL.field("d.id").as("id"),
+                DSL.field("d.customer_id").as("customer_id"),
+                DSL.field("d.uploader_id").as("uploader_id"),
+                DSL.field("d.uploader_type").as("uploader_type"),
+                DSL.field("d.doc_type").as("doc_type"),
+                DSL.field("d.ai_doc_type").as("ai_doc_type"),
+                DSL.field("d.file_name").as("file_name"),
+                DSL.field("d.file_url").as("file_url"),
+                DSL.field("d.file_size").as("file_size"),
+                DSL.field("d.mime_type").as("mime_type"),
+                DSL.field("d.ai_parse_status").as("ai_parse_status"),
+                DSL.field("d.confidence").as("confidence"),
+                DSL.field("d.ai_parsed_at").as("ai_parsed_at"),
+                DSL.field("d.created_at").as("created_at"),
+                DSL.field("c.name").as("customer_name"),
+                DSL.field("u.name").as("uploader_name"),
+        };
+    }
+
     private DocumentResponse mapToResponse(Record r) {
         return DocumentResponse.builder()
                 .id(r.get(DSL.field("id", Long.class)))
                 .customerId(r.get(DSL.field("customer_id", Long.class)))
                 .uploaderId(r.get(DSL.field("uploader_id", Long.class)))
-                .uploaderType(r.get(DSL.field("uploader_type", String.class)))
-                .docType(r.get(DSL.field("doc_type", String.class)))
+                .uploaderType(toEnumString(r.get(DSL.field("uploader_type"))))
+                .docType(toEnumString(r.get(DSL.field("doc_type"))))
                 .aiDocType(r.get(DSL.field("ai_doc_type", String.class)))
                 .fileName(r.get(DSL.field("file_name", String.class)))
                 .fileUrl(r.get(DSL.field("file_url", String.class)))
                 .fileSize(r.get(DSL.field("file_size", Long.class)))
                 .mimeType(r.get(DSL.field("mime_type", String.class)))
-                .aiParseStatus(r.get(DSL.field("ai_parse_status", String.class)))
+                .aiParseStatus(toEnumString(r.get(DSL.field("ai_parse_status"))))
                 .confidence(toPercent(r.get(DSL.field("confidence", BigDecimal.class))))
-                .aiParsedAt(r.get(DSL.field("ai_parsed_at", LocalDateTime.class)))
-                .createdAt(r.get(DSL.field("created_at", LocalDateTime.class)))
+                .aiParsedAt(toLocalDateTime(r.get("ai_parsed_at")))
+                .createdAt(toLocalDateTime(r.get("created_at")))
                 .build();
     }
 
@@ -430,24 +420,38 @@ public class DocumentService {
                 .customerId(r.get(DSL.field("customer_id", Long.class)))
                 .customerName(r.get(DSL.field("customer_name", String.class)))
                 .uploaderId(r.get(DSL.field("uploader_id", Long.class)))
-                .uploaderType(r.get(DSL.field("uploader_type", String.class)))
+                .uploaderType(toEnumString(r.get(DSL.field("uploader_type"))))
                 .uploaderName(r.get(DSL.field("uploader_name", String.class)))
-                .docType(r.get(DSL.field("doc_type", String.class)))
+                .docType(toEnumString(r.get(DSL.field("doc_type"))))
                 .aiDocType(r.get(DSL.field("ai_doc_type", String.class)))
                 .fileName(r.get(DSL.field("file_name", String.class)))
                 .fileUrl(r.get(DSL.field("file_url", String.class)))
                 .fileSize(r.get(DSL.field("file_size", Long.class)))
                 .mimeType(r.get(DSL.field("mime_type", String.class)))
-                .aiParseStatus(r.get(DSL.field("ai_parse_status", String.class)))
+                .aiParseStatus(toEnumString(r.get(DSL.field("ai_parse_status"))))
                 .confidence(toPercent(r.get(DSL.field("confidence", BigDecimal.class))))
-                .aiParsedAt(r.get(DSL.field("ai_parsed_at", LocalDateTime.class)))
-                .createdAt(r.get(DSL.field("created_at", LocalDateTime.class)))
+                .aiParsedAt(toLocalDateTime(r.get("ai_parsed_at")))
+                .createdAt(toLocalDateTime(r.get("created_at")))
                 .build();
+    }
+
+    private static LocalDateTime toLocalDateTime(Object val) {
+        if (val == null) return null;
+        if (val instanceof LocalDateTime ldt) return ldt;
+        if (val instanceof Timestamp ts) return ts.toLocalDateTime();
+        return null;
     }
 
     /** Convert stored 0–1 decimal confidence to 0–100 percentage for API response */
     private Double toPercent(BigDecimal raw) {
         return raw != null ? raw.doubleValue() * 100 : null;
+    }
+
+    private String toEnumString(Object value) {
+        if (value instanceof EnumType enumType) {
+            return enumType.getLiteral();
+        }
+        return value != null ? value.toString() : null;
     }
 
     private String getExtension(String filename) {

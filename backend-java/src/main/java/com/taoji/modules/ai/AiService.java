@@ -6,6 +6,7 @@ import com.taoji.security.JwtUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
+import org.jooq.EnumType;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Value;
@@ -123,7 +124,7 @@ public class AiService {
                     .toList();
             if (!docIds.isEmpty()) {
                 dsl.update(DSL.table("customer_documents"))
-                        .set(DSL.field("ai_parse_status"), "PROCESSING")
+                        .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "PROCESSING"))
                         .where(DSL.field("id").in(docIds))
                         .execute();
             }
@@ -131,7 +132,7 @@ public class AiService {
             int totalFields = 0;
             for (Record doc : documents) {
                 Long docId = doc.get(DSL.field("id", Long.class));
-                String docType = doc.get(DSL.field("doc_type", String.class));
+                String docType = toEnumString(doc.get(DSL.field("doc_type")));
                 String fileUrl = doc.get(DSL.field("file_url", String.class));
 
                 // Call AI API to parse document
@@ -169,7 +170,7 @@ public class AiService {
 
                 // Mark document as parsed, store ai_doc_type and aggregated confidence
                 dsl.update(DSL.table("customer_documents"))
-                        .set(DSL.field("ai_parse_status"), "DONE")
+                        .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "DONE"))
                         .set(DSL.field("ai_parsed_at"), LocalDateTime.now())
                         .set(DSL.field("ai_doc_type"), docType)
                         .set(DSL.field("confidence"), avgConf)
@@ -209,7 +210,7 @@ public class AiService {
                     .execute();
 
             dsl.update(DSL.table("customer_documents"))
-                    .set(DSL.field("ai_parse_status"), "FAILED")
+                    .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "FAILED"))
                     .where(DSL.field("customer_id").eq(customerId))
                     .and(DSL.field("ai_parse_status").eq("PROCESSING"))
                     .execute();
@@ -321,5 +322,12 @@ public class AiService {
                 .set(DSL.field("quota_used"), DSL.field("quota_used", Integer.class).plus(1))
                 .where(DSL.field("id").eq(institutionId))
                 .execute();
+    }
+
+    private String toEnumString(Object value) {
+        if (value instanceof EnumType enumType) {
+            return enumType.getLiteral();
+        }
+        return value != null ? value.toString() : null;
     }
 }
