@@ -45,11 +45,11 @@
     </scroll-view>
   </view>
 
-  <!-- Context bar (customer selector) -->
+  <!-- Context bar (customer for AI context) -->
   <view class="context-bar" bindtap="onContextBarTap">
     <view class="context-bar-main">
       <text wx:if="{{selectedCustomer}}" class="context-bar-name">当前客户：{{selectedCustomer.name}}</text>
-      <text wx:if="{{selectedCustomer}}" class="context-bar-sub">资料完整度 {{selectedCustomer.complete}}% · {{selectedCustomer.block}}</text>
+      <text wx:if="{{selectedCustomer}}" class="context-bar-sub">{{selectedCustomer.status}} · 完整度 {{selectedCustomer.docCompleteness ?? 0}}%</text>
       <text wx:else class="context-bar-name">请选择客户后再让 AI 识别资料</text>
       <text wx:else class="context-bar-sub">点击选择顾问名下客户，AI 会按该客户资料作业</text>
     </view>
@@ -122,14 +122,43 @@
     </view>
   </view>
 
-  <!-- Upload sheet -->
+  <!-- Upload customer picker -->
+  <view wx:if="{{uploadCustomerPickerVisible}}" class="sheet-mask" bindtap="onUploadCustomerPickerClose">
+    <view class="picker-sheet" catchtap="">
+      <view class="picker-head">
+        <text class="picker-title">选择上传目标客户</text>
+        <text class="picker-sub">选择后，文件将上传至该客户档案并触发 AI 解析</text>
+      </view>
+      <scroll-view scroll-y class="picker-list">
+        <view wx:for="{{uploadCustomers}}" wx:key="id" class="picker-item"
+          bindtap="onSelectUploadCustomer" data-id="{{item.id}}">
+          <view class="picker-item-main">
+            <text class="picker-item-name">{{item.name}}</text>
+            <view class="badge {{(item.docCompleteness ?? 0) < 70 ? 'badge-warn' : 'badge-ok'}}">
+              <text>{{item.docCompleteness ?? 0}}%</text>
+            </view>
+          </view>
+          <text class="picker-item-sub">{{item.status}} · {{item.contactName}}</text>
+        </view>
+        <view wx:if="{{uploadCustomers.length === 0}}" class="picker-empty">
+          <text>暂无客户数据</text>
+        </view>
+      </scroll-view>
+      <view class="sheet-cancel" bindtap="onUploadCustomerPickerClose"><text>取消</text></view>
+    </view>
+  </view>
+
+  <!-- Upload source sheet -->
   <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
     <view class="sheet" catchtap="">
+      <view class="doc-type-header">
+        <text class="doc-type-title">上传至：{{uploadTargetCustomer.name}}</text>
+      </view>
       <view class="sheet-item" bindtap="onUploadChoose" data-type="camera">
         <text class="sheet-icon">📷</text><text>拍摄现场资料</text>
       </view>
       <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
-        <text class="sheet-icon">📄</text><text>手机本地文件</text>
+        <text class="sheet-icon">🖼️</text><text>手机相册</text>
       </view>
       <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
         <text class="sheet-icon">💬</text><text>从微信聊天记录中选择</text>
@@ -139,24 +168,41 @@
     </view>
   </view>
 
-  <!-- Customer picker -->
+  <!-- Doc type selection sheet -->
+  <view wx:if="{{docTypeSheetVisible}}" class="sheet-mask" bindtap="onDocTypeSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="doc-type-header">
+        <text class="doc-type-title">选择文件类型</text>
+      </view>
+      <view wx:for="{{docTypes}}" wx:key="value" class="sheet-item"
+        bindtap="onDocTypeSelect" data-value="{{item.value}}" data-label="{{item.label}}">
+        <text class="sheet-icon">{{item.icon}}</text>
+        <text>{{item.label}}</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onDocTypeSheetClose"><text>取消</text></view>
+    </view>
+  </view>
+
+  <!-- Context bar customer picker (for AI context) -->
   <view wx:if="{{customerPickerVisible}}" class="sheet-mask" bindtap="onCustomerPickerClose">
     <view class="picker-sheet" catchtap="">
       <view class="picker-head">
         <text class="picker-title">选择客户</text>
         <text class="picker-sub">选择后，AI资料识别和银行材料建议都会绑定该客户</text>
-        <input class="picker-search" placeholder="搜索企业名称、联系人、行业"
+        <input class="picker-search" placeholder="搜索客户名称或联系人"
           value="{{searchKeyword}}" bindinput="onSearchInput" />
       </view>
       <scroll-view scroll-y class="picker-list">
-        <view wx:for="{{customers}}" wx:key="id" class="picker-item" bindtap="onSelectCustomer" data-id="{{item.id}}">
+        <view wx:for="{{uploadCustomers}}" wx:key="id" class="picker-item"
+          bindtap="onSelectCustomer" data-id="{{item.id}}">
           <view class="picker-item-main">
             <text class="picker-item-name">{{item.name}}</text>
-            <view class="badge {{item.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
-              <text>{{item.complete}}%</text>
+            <view class="badge {{(item.docCompleteness ?? 0) < 70 ? 'badge-warn' : 'badge-ok'}}">
+              <text>{{item.docCompleteness ?? 0}}%</text>
             </view>
           </view>
-          <text class="picker-item-sub">{{item.owner}} · {{item.stage}} · 缺口 {{item.block}}</text>
+          <text class="picker-item-sub">{{item.status}} · {{item.contactName}}</text>
         </view>
       </scroll-view>
       <view class="sheet-cancel" bindtap="onCustomerPickerClose"><text>取消</text></view>

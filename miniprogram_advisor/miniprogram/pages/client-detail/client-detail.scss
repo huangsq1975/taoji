@@ -27,3 +27,23 @@
 .action-row { display: flex; flex-direction: column; gap: 16rpx; }
 .pill-btn { display: flex; align-items: center; justify-content: center; padding: 22rpx; border-radius: 100rpx; border: 1rpx solid #dde7f3; background: #fff; color: #185FA5; font-size: 28rpx; font-weight: 600; }
 .pill-btn-primary { background: #185FA5; color: #fff; border-color: #185FA5; }
+
+/* Upload button */
+.doc-section-head { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.upload-btn { display: flex; flex-direction: row; align-items: center; gap: 8rpx; padding: 10rpx 24rpx; background: #185FA5; border-radius: 100rpx; }
+.upload-btn-icon { font-size: 28rpx; color: #fff; }
+.upload-btn-label { font-size: 24rpx; color: #fff; font-weight: 600; }
+
+/* Document list */
+.doc-loading { padding: 32rpx 0; text-align: center; font-size: 26rpx; color: #94a3b8; }
+.doc-empty { padding: 32rpx 0; text-align: center; font-size: 26rpx; color: #94a3b8; }
+.doc-item { display: flex; flex-direction: row; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid #f0f4f8; }
+.doc-item:last-child { border-bottom: none; }
+.doc-item-left { display: flex; flex-direction: row; align-items: center; gap: 16rpx; flex: 1; }
+.doc-type-badge { background: #eff6ff; color: #185FA5; font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 8rpx; flex-shrink: 0; }
+.doc-item-info { flex: 1; }
+.doc-file-name { font-size: 26rpx; color: #172033; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-status { font-size: 22rpx; margin-top: 4rpx; display: block; }
+.doc-status-done { color: #059669; }
+.doc-status-fail { color: #ef4444; }
+.doc-status-pending { color: #d97706; }

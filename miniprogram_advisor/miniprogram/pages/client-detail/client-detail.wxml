@@ -6,43 +6,75 @@
     <view class="client-header">
       <text class="client-name">{{customer.name}}</text>
       <view class="tag-row">
-        <view wx:for="{{customer.qual}}" wx:key="*this" class="qual-tag"><text>{{item}}</text></view>
+        <view class="qual-tag"><text>{{customer.status}}</text></view>
       </view>
     </view>
 
     <!-- Profile -->
     <view class="card">
-      <text class="card-title">企业画像</text>
-      <view class="info-row"><text class="label">行业/年限</text><text class="value">{{customer.industry}} · 成立{{customer.years}}</text></view>
-      <view class="info-row"><text class="label">法人/实控人</text><text class="value">{{customer.owner}}，学历{{customer.edu}}</text></view>
-      <view class="info-row"><text class="label">员工规模</text><text class="value">{{customer.staff}}</text></view>
-      <view class="info-row"><text class="label">经营流水</text><text class="value">{{customer.revenue}}</text></view>
-      <view class="info-row"><text class="label">税务情况</text><text class="value">{{customer.tax}}</text></view>
-      <view class="info-row"><text class="label">征信情况</text><text class="value">{{customer.credit}}</text></view>
-      <view class="info-row"><text class="label">经营场地</text><text class="value">{{customer.office}}</text></view>
+      <text class="card-title">客户信息</text>
+      <view class="info-row"><text class="label">融资需求</text><text class="value">{{customer.financingNeed}}</text></view>
+      <view class="info-row"><text class="label">联系人</text><text class="value">{{customer.contactName}}</text></view>
+      <view class="info-row"><text class="label">联系电话</text><text class="value">{{customer.contactPhone}}</text></view>
+      <view wx:if="{{customer.loanAmount}}" class="info-row">
+        <text class="label">贷款金额</text>
+        <text class="value">{{customer.loanAmount}} 元</text>
+      </view>
+      <view wx:if="{{customer.aiSummary}}" class="info-row">
+        <text class="label">AI摘要</text>
+        <text class="value">{{customer.aiSummary}}</text>
+      </view>
+      <view wx:if="{{customer.riskNotes}}" class="info-row">
+        <text class="label">风险备注</text>
+        <text class="value warn-text">{{customer.riskNotes}}</text>
+      </view>
     </view>
 
-    <!-- Progress -->
+    <!-- Doc progress -->
     <view class="card">
       <view class="progress-head">
-        <text class="card-title" style="margin-bottom:0">资料进度 · {{customer.complete}}%</text>
-        <view class="badge {{customer.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
-          <text>{{customer.risk}}风险</text>
+        <text class="card-title" style="margin-bottom:0">资料完整度 · {{customer.docCompleteness ?? 0}}%</text>
+        <view class="badge {{(customer.docCompleteness ?? 0) < 70 ? 'badge-warn' : 'badge-ok'}}">
+          <text>{{(customer.docCompleteness ?? 0) < 70 ? '待补充' : '良好'}}</text>
         </view>
       </view>
       <view class="progress-bar" style="margin: 16rpx 0">
-        <view class="progress-bar-fill {{customer.complete < 70 ? 'progress-bar-fill-warn' : ''}}" style="width: {{customer.complete}}%" />
+        <view class="progress-bar-fill {{(customer.docCompleteness ?? 0) < 70 ? 'progress-bar-fill-warn' : ''}}"
+          style="width: {{customer.docCompleteness ?? 0}}%" />
       </view>
-      <view class="info-row"><text class="label">已上传</text><text class="value">{{uploadedDocs.join('、')}}</text></view>
-      <view class="info-row"><text class="label">资料缺口</text><text class="value warn-text">{{missingDocs.join('、')}}</text></view>
-      <view class="info-row"><text class="label">AI建议</text><text class="value">{{customer.next}}</text></view>
     </view>
 
-    <!-- Status -->
+    <!-- Uploaded documents -->
     <view class="card">
-      <text class="card-title">当前状态</text>
-      <view class="info-row"><text class="label">作业阶段</text><text class="value blue-text">{{customer.stage}}</text></view>
-      <view class="info-row"><text class="label">当前卡点</text><text class="value">{{customer.block}}</text></view>
+      <view class="doc-section-head">
+        <text class="card-title" style="margin-bottom:0">已上传资料</text>
+        <view class="upload-btn" bindtap="onUploadTap">
+          <text class="upload-btn-icon">⊕</text>
+          <text class="upload-btn-label">上传文件</text>
+        </view>
+      </view>
+
+      <view wx:if="{{loadingDocs}}" class="doc-loading"><text>加载中...</text></view>
+
+      <view wx:elif="{{documents.length === 0}}" class="doc-empty">
+        <text>暂无已上传资料</text>
+      </view>
+
+      <view wx:else>
+        <view wx:for="{{documents}}" wx:key="id" class="doc-item">
+          <view class="doc-item-left">
+            <view class="doc-type-badge">
+              <text>{{docTypeLabels[item.docType] ?? item.docType}}</text>
+            </view>
+            <view class="doc-item-info">
+              <text class="doc-file-name">{{item.fileName}}</text>
+              <text class="doc-status {{item.aiParseStatus === 'DONE' ? 'doc-status-done' : item.aiParseStatus === 'FAILED' ? 'doc-status-fail' : 'doc-status-pending'}}">
+                {{parseStatusLabels[item.aiParseStatus] ?? item.aiParseStatus}}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
 
     <!-- Actions -->
@@ -55,4 +87,37 @@
 
     <view style="height: 40rpx" />
   </scroll-view>
+
+  <!-- Upload source sheet -->
+  <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="camera">
+        <text class="sheet-icon">📷</text><text>拍摄现场资料</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
+        <text class="sheet-icon">🖼️</text><text>手机相册</text>
+      </view>
+      <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
+        <text class="sheet-icon">💬</text><text>从微信聊天记录中选择</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onUploadSheetClose"><text>取消</text></view>
+    </view>
+  </view>
+
+  <!-- Doc type selection sheet -->
+  <view wx:if="{{docTypeSheetVisible}}" class="sheet-mask" bindtap="onDocTypeSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="doc-type-header">
+        <text class="doc-type-title">选择文件类型</text>
+      </view>
+      <view wx:for="{{docTypes}}" wx:key="value" class="sheet-item"
+        bindtap="onDocTypeSelect" data-value="{{item.value}}" data-label="{{item.label}}">
+        <text class="sheet-icon">{{item.icon}}</text>
+        <text>{{item.label}}</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onDocTypeSheetClose"><text>取消</text></view>
+    </view>
+  </view>
 </view>

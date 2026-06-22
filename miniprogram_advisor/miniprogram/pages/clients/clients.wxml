@@ -14,15 +14,16 @@
       <view class="client-card-head">
         <view class="client-name-wrap">
           <text class="client-name">{{item.name}}</text>
-          <text class="client-advisor">{{item.advisor}}</text>
+          <text class="client-advisor">{{item.advisorName}}</text>
         </view>
-        <view class="badge {{item.complete < 70 ? 'badge-warn' : 'badge-ok'}}">
-          <text>{{item.complete}}%</text>
+        <view class="badge {{(item.docCompleteness ?? 0) < 70 ? 'badge-warn' : 'badge-ok'}}">
+          <text>{{item.docCompleteness ?? 0}}%</text>
         </view>
       </view>
-      <text class="client-meta">{{item.stage}} · {{item.industry}} · 缺口 {{item.block}}</text>
+      <text class="client-meta">{{item.status}} · {{item.contactName}} · {{item.financingNeed}}</text>
       <view class="progress-bar">
-        <view class="progress-bar-fill {{item.complete < 70 ? 'progress-bar-fill-warn' : ''}}" style="width: {{item.complete}}%" />
+        <view class="progress-bar-fill {{(item.docCompleteness ?? 0) < 70 ? 'progress-bar-fill-warn' : ''}}"
+          style="width: {{item.docCompleteness ?? 0}}%" />
       </view>
       <view class="client-card-actions">
         <view class="action-btn" catchtap="onBankTap" data-id="{{item.id}}">
@@ -32,6 +33,9 @@
           <text>删除</text>
         </view>
       </view>
+    </view>
+    <view wx:if="{{customers.length === 0}}" class="empty-tip">
+      <text>暂无客户数据</text>
     </view>
     <view style="height: 40rpx" />
   </scroll-view>

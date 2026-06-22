@@ -7,5 +7,8 @@ interface IAppOption {
       role: string
       institutionName: string
     }
+    token?: string
+    loginDone?: boolean
   }
+  loginReadyCallback: (() => void) | null
 }
