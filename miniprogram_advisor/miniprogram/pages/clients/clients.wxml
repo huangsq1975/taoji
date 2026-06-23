@@ -1,6 +1,23 @@
 <view class="page-wrap">
-  <navigation-bar title="客户列表" background="#fff" color="#172033" />
+  <navigation-bar title="客户列表" background="#fff" color="#172033" back="{{false}}">
+    <view slot="right" class="nav-add-btn" bindtap="onCreateTap">
+      <text class="nav-add-icon">＋</text>
+    </view>
+  </navigation-bar>
 
+  <!-- Search bar -->
+  <view class="search-bar">
+    <text class="search-icon">🔍</text>
+    <input
+      class="search-input"
+      placeholder="搜索企业名称、联系人、电话"
+      placeholder-class="search-placeholder"
+      value="{{searchKeyword}}"
+      bindinput="onSearchInput"
+    />
+  </view>
+
+  <!-- Filter tabs -->
   <view class="filter-bar">
     <view wx:for="{{filters}}" wx:key="key"
       class="filter-item {{activeFilter === item.key ? 'active' : ''}}"
@@ -10,21 +27,45 @@
   </view>
 
   <scroll-view scroll-y class="scroll-area">
-    <view wx:for="{{customers}}" wx:key="id" class="client-card" bindtap="onClientTap" data-id="{{item.id}}">
+    <!-- Loading -->
+    <view wx:if="{{loading}}" class="loading-tip">
+      <text>加载中…</text>
+    </view>
+
+    <!-- Empty state -->
+    <view wx:elif="{{filteredCustomers.length === 0}}" class="empty-tip">
+      <text>{{searchKeyword || activeFilter !== 'all' ? '暂无匹配客户' : '暂无客户数据'}}</text>
+      <view wx:if="{{!searchKeyword && activeFilter === 'all'}}" class="empty-create-btn" bindtap="onCreateTap">
+        <text>＋ 新建客户</text>
+      </view>
+    </view>
+
+    <!-- Customer list -->
+    <view wx:for="{{filteredCustomers}}" wx:key="id" class="client-card" bindtap="onClientTap" data-id="{{item.id}}">
       <view class="client-card-head">
         <view class="client-name-wrap">
           <text class="client-name">{{item.name}}</text>
-          <text class="client-advisor">{{item.advisorName}}</text>
+          <text class="client-advisor" wx:if="{{item.advisorName}}">{{item.advisorName}}</text>
         </view>
-        <view class="badge {{(item.docCompleteness ?? 0) < 70 ? 'badge-warn' : 'badge-ok'}}">
-          <text>{{item.docCompleteness ?? 0}}%</text>
+        <view class="badge {{item.statusClass}}">
+          <text>{{item.statusLabel}}</text>
         </view>
       </view>
-      <text class="client-meta">{{item.status}} · {{item.contactName}} · {{item.financingNeed}}</text>
-      <view class="progress-bar">
-        <view class="progress-bar-fill {{(item.docCompleteness ?? 0) < 70 ? 'progress-bar-fill-warn' : ''}}"
-          style="width: {{item.docCompleteness ?? 0}}%" />
+
+      <view class="client-meta-row">
+        <text class="client-meta" wx:if="{{item.contactName}}">{{item.contactName}}</text>
+        <text class="client-meta-sep" wx:if="{{item.contactName && item.financingNeed}}"> · </text>
+        <text class="client-meta" wx:if="{{item.financingNeed}}">{{item.financingNeed}}</text>
       </view>
+
+      <view class="progress-wrap">
+        <view class="progress-bar">
+          <view class="progress-bar-fill {{(item.docCompleteness ?? 0) < 70 ? 'progress-bar-fill-warn' : ''}}"
+            style="width: {{item.docCompleteness ?? 0}}%" />
+        </view>
+        <text class="progress-pct {{(item.docCompleteness ?? 0) < 70 ? 'progress-pct-warn' : ''}}">{{item.docCompleteness ?? 0}}%</text>
+      </view>
+
       <view class="client-card-actions">
         <view class="action-btn" catchtap="onBankTap" data-id="{{item.id}}">
           <text>整理材料</text>
@@ -34,9 +75,38 @@
         </view>
       </view>
     </view>
-    <view wx:if="{{customers.length === 0}}" class="empty-tip">
-      <text>暂无客户数据</text>
-    </view>
+
     <view style="height: 40rpx" />
   </scroll-view>
+
+  <!-- Create customer sheet -->
+  <view wx:if="{{createSheetVisible}}" class="sheet-mask" bindtap="onCreateSheetClose">
+    <view class="sheet" catchtap="">
+      <view class="sheet-header">
+        <text class="sheet-title">新建客户</text>
+        <view class="sheet-close" bindtap="onCreateSheetClose"><text>✕</text></view>
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">企业名称 <text class="required">*</text></text>
+        <input class="form-input" placeholder="请输入企业名称" value="{{newName}}" bindinput="onNewNameInput" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">联系人</text>
+        <input class="form-input" placeholder="联系人姓名" value="{{newContactName}}" bindinput="onNewContactNameInput" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">联系电话</text>
+        <input class="form-input" type="number" placeholder="联系电话" value="{{newContactPhone}}" bindinput="onNewContactPhoneInput" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">融资需求</text>
+        <input class="form-input" placeholder="简述融资用途或金额" value="{{newFinancingNeed}}" bindinput="onNewFinancingNeedInput" />
+      </view>
+
+      <view class="sheet-submit {{creating ? 'sheet-submit-disabled' : ''}}" bindtap="onCreateSubmit">
+        <text>{{creating ? '创建中…' : '确认创建'}}</text>
+      </view>
+    </view>
+  </view>
 </view>

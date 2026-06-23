@@ -1,21 +1,33 @@
 <view class="page-wrap">
   <navigation-bar title="银行材料整理" background="#fff" color="#172033" />
 
-  <!-- Selectors -->
+  <!-- Row 1: Customer + Bank pickers -->
   <view class="selector-bar">
-    <picker mode="selector" range="{{customers}}" range-key="name"
-      value="{{0}}" bindchange="onCustomerChange">
+    <picker mode="selector" range="{{customerNames}}" value="{{selectedCustomerIdx}}"
+      bindchange="onCustomerChange" disabled="{{customerNames.length === 0}}">
       <view class="selector-item">
         <text class="selector-label">客户</text>
-        <text class="selector-val">{{customers[0].name}}</text>
+        <text class="selector-val">{{selectedCustomerName}}</text>
         <text class="selector-arrow">▾</text>
       </view>
     </picker>
-    <picker mode="selector" range="{{banks}}" range-key="name"
-      value="{{0}}" bindchange="onBankChange">
-      <view class="selector-item">
+    <picker mode="selector" range="{{bankNames}}" value="{{selectedBankIdx}}"
+      bindchange="onBankChange" disabled="{{bankNames.length === 0}}">
+      <view class="selector-item selector-item-last">
         <text class="selector-label">银行</text>
-        <text class="selector-val">{{banks[0].name}}</text>
+        <text class="selector-val">{{selectedBankName}}</text>
+        <text class="selector-arrow">▾</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- Row 2: Product picker -->
+  <view class="product-bar">
+    <picker mode="selector" range="{{productNames}}" value="{{selectedProductIdx}}"
+      bindchange="onProductChange" disabled="{{productNames.length === 0}}">
+      <view class="product-selector">
+        <text class="selector-label">产品</text>
+        <text class="product-val">{{selectedProductName}}</text>
         <text class="selector-arrow">▾</text>
       </view>
     </picker>
@@ -30,102 +42,112 @@
     </view>
   </view>
 
-  <!-- Tab content -->
   <scroll-view scroll-y class="scroll-area">
 
     <!-- 材料要求 tab -->
     <block wx:if="{{activeTab === 'requirements'}}">
-      <view class="card">
-        <text class="card-title">建行善科贷 · 材料要求</text>
-        <text class="card-note">这是银行产品固定资料配置，不判断当前客户是否已满足。</text>
-        <view class="info-row"><text class="label">适用客群</text><text class="value">高新/专精特新，经营满2年，纳税和流水稳定</text></view>
-        <view class="info-row"><text class="label">参考额度</text><text class="value">50-1000万</text></view>
-        <view class="info-row"><text class="label">参考利率</text><text class="value">3.05%-4.20%</text></view>
-        <view class="info-row"><text class="label">参考期限</text><text class="value">12-36个月</text></view>
-      </view>
-      <view class="card">
-        <text class="card-title">基础主体资料</text>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">营业执照</text><text class="material-source">客户上传/C端 · 彩色扫描件</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
+
+      <!-- Product info card -->
+      <view class="card" wx:if="{{selectedProduct}}">
+        <text class="card-title">{{selectedProductName}}</text>
+        <view class="info-row" wx:if="{{selectedProduct.loanAmount}}">
+          <text class="label">参考额度</text>
+          <text class="value">{{selectedProduct.loanAmount}}</text>
         </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">法人/实控人信息</text><text class="material-source">顾问录入 · 身份证明、联系方式</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
+        <view class="info-row" wx:if="{{selectedProduct.loanTerm}}">
+          <text class="label">参考期限</text>
+          <text class="value">{{selectedProduct.loanTerm}}</text>
         </view>
-      </view>
-      <view class="card">
-        <text class="card-title">征信授权资料</text>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">企业征信授权</text><text class="material-source">银行制式授权 · 签字盖章版</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
+        <view class="info-row" wx:if="{{selectedProduct.description}}">
+          <text class="label">产品说明</text>
+          <text class="value">{{selectedProduct.description}}</text>
         </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">法人征信授权</text><text class="material-source">银行制式授权 · 法人签字</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
+        <view class="info-row" wx:if="{{selectedProduct.requirements}}">
+          <text class="label">申请条件</text>
+          <text class="value">{{selectedProduct.requirements}}</text>
         </view>
       </view>
-      <view class="card">
-        <text class="card-title">经营财务资料</text>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">近12个月流水</text><text class="material-source">客户上传 · 银行流水或电子流水</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">纳税记录</text><text class="material-source">税务截图/授权导出 · 近12个月连续</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">科技资质证明</text><text class="material-source">客户上传 · 国高/科小/专精特新证书</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
+
+      <!-- Loading state -->
+      <view class="state-tip" wx:if="{{loadingMaterials}}">
+        <text>加载材料要求中…</text>
+      </view>
+
+      <!-- Empty state -->
+      <view class="state-tip" wx:elif="{{materialGroups.length === 0 && !loadingMaterials}}">
+        <text>当前产品暂未配置材料清单</text>
+      </view>
+
+      <!-- Material groups -->
+      <view wx:for="{{materialGroups}}" wx:key="category" wx:for-item="group" class="card">
+        <text class="card-title">{{group.category}}</text>
+        <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="material-row">
+          <view class="material-info">
+            <text class="material-name">{{item.name}}</text>
+            <text class="material-source" wx:if="{{item.source || item.format}}">
+              {{item.source}}{{item.source && item.format ? ' · ' : ''}}{{item.format}}
+            </text>
+            <text class="material-note" wx:if="{{item.note}}">{{item.note}}</text>
+          </view>
+          <view class="badge {{item.required ? 'badge-ok' : 'badge-gray'}}">
+            <text>{{item.required ? '必填' : '选填'}}</text>
+          </view>
         </view>
       </view>
-      <view class="card">
-        <text class="card-title">银行制式表格</text>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">善科贷企业信息采集表</text><text class="material-source">银行制式表格 · 按产品字段填写</text></view>
-          <view class="badge badge-ok"><text>必填</text></view>
-        </view>
+
+      <view class="note-box" wx:if="{{materialGroups.length > 0}}">
+        <text>顾问提示：以上为银行产品固定材料配置，客户资料缺口请切到「资料匹配」查看。</text>
       </view>
-      <view class="note-box">
-        <text>顾问提示：材料要求来自银行产品口径配置，客户级缺口请切到"资料匹配"查看。</text>
-      </view>
+
     </block>
 
     <!-- 资料匹配 tab -->
     <block wx:if="{{activeTab === 'match'}}">
-      <view class="card">
-        <text class="card-title">东莞某智能设备 · 建行善科贷 · 资料匹配</text>
-        <text class="card-note">按当前客户已上传资料，对照银行产品要求判断状态。</text>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">营业执照</text><text class="material-source">客户/顾问已提供</text></view>
-          <view class="badge badge-ok"><text>已满足</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">近12个月流水</text><text class="material-source">客户/顾问已提供</text></view>
-          <view class="badge badge-ok"><text>已满足</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">科技资质证明</text><text class="material-source">客户/顾问已提供</text></view>
-          <view class="badge badge-ok"><text>已满足</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">企业征信授权</text><text class="material-source">待补充或待识别</text></view>
-          <view class="badge badge-warn"><text>缺失</text></view>
-        </view>
-        <view class="material-row">
-          <view class="material-info"><text class="material-name">银行材料补充表</text><text class="material-source">待补充或待识别</text></view>
-          <view class="badge badge-warn"><text>缺失</text></view>
+
+      <!-- Summary header -->
+      <view class="match-header card" wx:if="{{selectedCustomerName !== '请选择客户'}}">
+        <text class="match-header-text">{{selectedCustomerName}} · {{selectedProductName}}</text>
+        <text class="match-sub">已上传 {{customerDocs.length}} 份文件，对照银行材料要求匹配如下</text>
+      </view>
+
+      <view class="state-tip" wx:if="{{selectedCustomerIdx < 0}}">
+        <text>请先在上方选择客户</text>
+      </view>
+
+      <view class="state-tip" wx:elif="{{matchGroups.length === 0}}">
+        <text>暂无可匹配的材料要求</text>
+      </view>
+
+      <view wx:for="{{matchGroups}}" wx:key="category" wx:for-item="group" class="card">
+        <text class="card-title">{{group.category}}</text>
+        <view wx:for="{{group.items}}" wx:key="id" wx:for-item="item" class="material-row">
+          <view class="material-info">
+            <text class="material-name">{{item.name}}</text>
+            <text class="material-source" wx:if="{{item.source}}">{{item.source}}</text>
+          </view>
+          <view class="badge {{item.matchClass}}">
+            <text>{{item.matchStatus}}</text>
+          </view>
         </view>
       </view>
+
+      <!-- Create report task button -->
+      <view class="card" wx:if="{{selectedCustomerIdx >= 0 && selectedProductIdx >= 0}}">
+        <view class="report-btn {{creating ? 'report-btn-disabled' : ''}}" bindtap="onCreateReportTask">
+          <text>{{creating ? '创建中…' : '生成 AI 填报任务'}}</text>
+        </view>
+        <text class="report-hint">AI 将根据材料配置自动填写字段草稿，顾问复核后可导出材料包</text>
+      </view>
+
     </block>
 
     <!-- AI修改 tab -->
     <block wx:if="{{activeTab === 'ai'}}">
       <view class="card">
-        <text class="card-title">AI修改助手</text>
+        <text class="card-title">AI 修改助手</text>
+        <text class="card-note">告诉我材料说明哪里需要调整，AI 会生成修改建议。</text>
         <view class="ai-chat">
-          <view wx:for="{{aiMessages}}" wx:key="text"
+          <view wx:for="{{aiMessages}}" wx:key="{{index}}"
             class="ai-msg {{item.role === 'user' ? 'ai-msg-user' : 'ai-msg-ai'}}">
             <text>{{item.text}}</text>
           </view>

@@ -7,13 +7,13 @@
       <text class="card-title">当前状态</text>
       <view class="info-row">
         <text class="label">当前阶段</text>
-        <text class="value blue">{{currentStage}}</text>
+        <text class="value blue">{{loading ? '加载中…' : currentStage}}</text>
       </view>
-      <view class="info-row">
-        <text class="label">当前卡点</text>
+      <view class="info-row" wx:if="{{!loading && blocker}}">
+        <text class="label">当前情况</text>
         <text class="value">{{blocker}}</text>
       </view>
-      <view class="info-row">
+      <view class="info-row" wx:if="{{!loading && nextStep}}">
         <text class="label">下一步</text>
         <text class="value">{{nextStep}}</text>
       </view>
@@ -34,36 +34,39 @@
           </view>
           <view class="timeline-content">
             <text class="timeline-label">{{item.label}}</text>
-            <text class="timeline-time">{{item.time}}{{item.desc ? ' · ' + item.desc : ''}}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- Pending docs -->
-    <view class="card">
-      <text class="card-title">待客户处理</text>
+    <!-- Uploaded documents -->
+    <view class="card" wx:if="{{!loading}}">
+      <text class="card-title">已上传资料</text>
+      <view wx:if="{{uploadedDocs.length === 0}}" class="empty-hint">
+        <text>暂无上传资料，点击下方按钮开始上传</text>
+      </view>
       <view
-        wx:for="{{pendingDocs}}"
-        wx:key="name"
+        wx:for="{{uploadedDocs}}"
+        wx:key="fileName"
         class="doc-item"
       >
         <view class="doc-info">
-          <text class="doc-name">{{item.name}}</text>
-          <text class="doc-desc">{{item.desc}}</text>
+          <text class="doc-name">{{item.docTypeLabel}}</text>
+          <text class="doc-desc">{{item.fileName}}</text>
         </view>
-        <view class="badge {{item.status === 'missing' ? 'badge-warn' : 'badge-ok'}}">
-          <text>{{item.status === 'missing' ? '待补' : '已记录'}}</text>
+        <view class="badge {{item.aiParseStatus === 'DONE' ? 'badge-ok' : item.aiParseStatus === 'FAILED' ? 'badge-fail' : 'badge-warn'}}">
+          <text>{{item.aiParseStatusLabel}}</text>
         </view>
       </view>
     </view>
 
     <!-- Advisor message -->
-    <view class="card">
+    <view class="card" wx:if="{{latestFollowUp}}">
       <text class="card-title">顾问留言</text>
       <view class="advisor-msg-box">
-        <text class="advisor-name">张顾问：</text>
-        <text class="advisor-msg-text">{{advisorMessage}}</text>
+        <text class="advisor-name">{{latestFollowUp.advisorName}}：</text>
+        <text class="advisor-msg-text">{{latestFollowUp.content}}</text>
+        <text class="advisor-msg-time">{{latestFollowUp.createdAt}}</text>
       </view>
     </view>
 
@@ -76,21 +79,4 @@
 
     <view style="height: 20rpx" />
   </scroll-view>
-
-  <!-- Upload sheet -->
-  <view wx:if="{{uploadSheetVisible}}" class="sheet-mask" bindtap="onUploadSheetClose">
-    <view class="sheet" catchtap="">
-      <view class="sheet-item" bindtap="onUploadChoose" data-type="camera">
-        <text class="sheet-icon">📷</text><text>拍照</text>
-      </view>
-      <view class="sheet-item" bindtap="onUploadChoose" data-type="local">
-        <text class="sheet-icon">📄</text><text>手机本地文件</text>
-      </view>
-      <view class="sheet-item" bindtap="onUploadChoose" data-type="wechat">
-        <text class="sheet-icon">💬</text><text>从微信聊天记录中选择</text>
-      </view>
-      <view class="sheet-gap" />
-      <view class="sheet-cancel" bindtap="onUploadSheetClose"><text>取消</text></view>
-    </view>
-  </view>
 </view>

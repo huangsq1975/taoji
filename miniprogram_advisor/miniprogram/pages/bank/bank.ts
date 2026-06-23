@@ -1,66 +1,324 @@
-import { mockCustomers, mockBanks, mockProducts, mockMaterialGroups, UPLOADED_DOCS, MISSING_DOCS, Customer, Bank, Product, MaterialGroup } from '../../utils/mock'
+const API_BASE = 'http://localhost:3000/api/v1'
+const app = getApp<IAppOption>()
+
+// Heuristic: match material item name to customer doc type
+const DOC_KEYWORDS: Array<[string, string]> = [
+  ['营业执照', 'BUSINESS_LICENSE'],
+  ['流水', 'BANK_STATEMENT'],
+  ['银行流水', 'BANK_STATEMENT'],
+  ['征信', 'CREDIT_REPORT'],
+  ['发票', 'TAX_INVOICE'],
+  ['税', 'TAX_INVOICE'],
+  ['房产', 'PROPERTY_CERT'],
+  ['身份证', 'ID_CARD'],
+  ['财务报表', 'FINANCIAL_STATEMENT'],
+  ['财报', 'FINANCIAL_STATEMENT'],
+]
+
+function guessDocType(name: string): string | null {
+  for (const [kw, dt] of DOC_KEYWORDS) {
+    if (name.includes(kw)) return dt
+  }
+  return null
+}
 
 type BankTab = 'requirements' | 'match' | 'ai'
 
+interface ApiCustomer { id: number; name: string }
+interface ApiBank { id: number; name: string }
+interface ApiProduct { id: number; name: string; loanAmount?: string; loanTerm?: string; description?: string; requirements?: string }
+interface ApiMaterial { id: number; name: string; required: boolean; source?: string; format?: string; note?: string; category: string }
+interface ApiDoc { id: number; docType: string; fileName: string; aiParseStatus: string }
+
+interface MatchItem extends ApiMaterial {
+  matchStatus: string
+  matchClass: string
+}
+
+interface MaterialGroup {
+  category: string
+  items: ApiMaterial[]
+}
+
+interface MatchGroup {
+  category: string
+  items: MatchItem[]
+}
+
 Page({
   data: {
-    customers: mockCustomers as Customer[],
-    banks: mockBanks as Bank[],
-    selectedCustomerId: 'c1',
-    selectedBankId: 'b1',
+    customers: [] as ApiCustomer[],
+    banks: [] as ApiBank[],
+    products: [] as ApiProduct[],
+    materials: [] as ApiMaterial[],
+    customerDocs: [] as ApiDoc[],
+
+    selectedCustomerIdx: -1,
+    selectedBankIdx: 0,
+    selectedProductIdx: 0,
+
+    // Picker range names
+    customerNames: [] as string[],
+    bankNames: [] as string[],
+    productNames: [] as string[],
+
+    // Display in selectors
+    selectedCustomerName: '请选择客户',
+    selectedBankName: '请选择银行',
+    selectedProductName: '请选择产品',
+
+    // Computed for tabs
+    materialGroups: [] as MaterialGroup[],
+    matchGroups: [] as MatchGroup[],
+    selectedProduct: null as ApiProduct | null,
+
+    // UI state
     activeTab: 'requirements' as BankTab,
     tabs: [
       { key: 'requirements', label: '材料要求' },
       { key: 'match', label: '资料匹配' },
       { key: 'ai', label: 'AI修改' },
     ],
+    loadingMaterials: false,
+    creating: false,
+    pendingCustomerId: 0,
+
     aiInput: '',
-    aiMessages: [{ role: 'ai', text: '告诉我材料说明哪里不对，我会生成修改建议，等待顾问复核。' }] as Array<{role: string; text: string}>,
+    aiMessages: [
+      { role: 'ai', text: '告诉我材料说明哪里不对，我会生成修改建议，等待顾问复核。' },
+    ] as Array<{ role: string; text: string }>,
   },
 
   onLoad(options: Record<string, string>) {
-    if (options['customerId']) {
-      this.setData({ selectedCustomerId: options['customerId'] })
+    const customerId = parseInt(options['customerId'] || '0', 10) || 0
+    this.setData({ pendingCustomerId: customerId })
+    this.loadCustomers()
+    this.loadBanks()
+  },
+
+  loadCustomers() {
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    wx.request({
+      url: `${API_BASE}/customers?pageSize=100`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: { items?: ApiCustomer[] } }
+        const items = payload.data?.items ?? []
+        const customerNames = items.map(c => c.name)
+
+        let idx = items.length > 0 ? 0 : -1
+        const { pendingCustomerId } = this.data
+        if (pendingCustomerId) {
+          const found = items.findIndex(c => c.id === pendingCustomerId)
+          if (found >= 0) idx = found
+        }
+
+        this.setData({
+          customers: items,
+          customerNames,
+          selectedCustomerIdx: idx,
+          selectedCustomerName: idx >= 0 ? items[idx].name : '请选择客户',
+        })
+
+        if (idx >= 0) this.loadCustomerDocs(items[idx].id)
+      },
+    })
+  },
+
+  loadBanks() {
+    wx.request({
+      url: `${API_BASE}/banks`,
+      method: 'GET',
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ApiBank[] }
+        const banks = payload.data ?? []
+        const bankNames = banks.map(b => b.name)
+        const idx = banks.length > 0 ? 0 : -1
+        this.setData({
+          banks,
+          bankNames,
+          selectedBankIdx: idx,
+          selectedBankName: idx >= 0 ? banks[idx].name : '请选择银行',
+        })
+        if (idx >= 0) this.loadProducts(banks[idx].id)
+      },
+    })
+  },
+
+  loadProducts(bankId: number) {
+    wx.request({
+      url: `${API_BASE}/banks/products?bankId=${bankId}`,
+      method: 'GET',
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ApiProduct[] }
+        const products = payload.data ?? []
+        const productNames = products.map(p => p.name)
+        const idx = products.length > 0 ? 0 : -1
+        this.setData({
+          products,
+          productNames,
+          selectedProductIdx: idx,
+          selectedProductName: idx >= 0 ? products[idx].name : '暂无产品',
+          selectedProduct: idx >= 0 ? products[idx] : null,
+          materials: [],
+          materialGroups: [],
+          matchGroups: [],
+        })
+        if (idx >= 0) this.loadMaterials(products[idx].id)
+      },
+    })
+  },
+
+  loadMaterials(productId: number) {
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    this.setData({ loadingMaterials: true })
+    wx.request({
+      url: `${API_BASE}/banks/products/${productId}/materials`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ApiMaterial[] }
+        const materials = payload.data ?? []
+        this.setData({ materials, loadingMaterials: false })
+        this.buildMaterialGroups(materials)
+        this.computeMatch()
+      },
+      fail: () => {
+        this.setData({ loadingMaterials: false })
+      },
+    })
+  },
+
+  loadCustomerDocs(customerId: number) {
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    wx.request({
+      url: `${API_BASE}/customers/${customerId}/documents`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ApiDoc[] }
+        this.setData({ customerDocs: payload.data ?? [] })
+        this.computeMatch()
+      },
+    })
+  },
+
+  buildMaterialGroups(materials: ApiMaterial[]) {
+    const map = new Map<string, ApiMaterial[]>()
+    for (const m of materials) {
+      const cat = m.category || '基本资料'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(m)
     }
-    // Auto-select bank based on customer
-    const c = this.selectedCustomer()
-    if (c) {
-      this.setData({ selectedBankId: c.bankId })
+    this.setData({ materialGroups: [...map.entries()].map(([category, items]) => ({ category, items })) })
+  },
+
+  computeMatch() {
+    const { materials, customerDocs } = this.data
+    const uploaded = new Set(customerDocs.map(d => d.docType))
+
+    const map = new Map<string, MatchItem[]>()
+    for (const m of materials) {
+      const guessed = guessDocType(m.name)
+      const matched = guessed ? uploaded.has(guessed) : false
+      const item: MatchItem = {
+        ...m,
+        matchStatus: matched ? '已满足' : (m.required ? '缺失' : '未上传'),
+        matchClass: matched ? 'badge-ok' : (m.required ? 'badge-warn' : 'badge-gray'),
+      }
+      const cat = m.category || '基本资料'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(item)
     }
-  },
-
-  selectedCustomer(): Customer | undefined {
-    return this.data.customers.find(c => c.id === this.data.selectedCustomerId)
-  },
-
-  selectedBank(): Bank | undefined {
-    return this.data.banks.find(b => b.id === this.data.selectedBankId)
-  },
-
-  selectedProduct(): Product | undefined {
-    return mockProducts.find(p => p.bankId === this.data.selectedBankId)
-  },
-
-  materialGroups(): MaterialGroup[] {
-    const p = this.selectedProduct()
-    if (!p) return []
-    return mockMaterialGroups[p.id] || []
+    this.setData({ matchGroups: [...map.entries()].map(([category, items]) => ({ category, items })) })
   },
 
   onCustomerChange(e: WechatMiniprogram.PickerChange) {
-    const idx = parseInt(e.detail.value as string)
-    const c = this.data.customers[idx]
-    if (c) this.setData({ selectedCustomerId: c.id, selectedBankId: c.bankId })
+    const idx = parseInt(e.detail.value as string, 10)
+    const customer = this.data.customers[idx]
+    if (!customer) return
+    this.setData({
+      selectedCustomerIdx: idx,
+      selectedCustomerName: customer.name,
+      customerDocs: [],
+      matchGroups: [],
+    })
+    this.loadCustomerDocs(customer.id)
   },
 
   onBankChange(e: WechatMiniprogram.PickerChange) {
-    const idx = parseInt(e.detail.value as string)
-    const b = this.data.banks[idx]
-    if (b) this.setData({ selectedBankId: b.id })
+    const idx = parseInt(e.detail.value as string, 10)
+    const bank = this.data.banks[idx]
+    if (!bank) return
+    this.setData({
+      selectedBankIdx: idx,
+      selectedBankName: bank.name,
+      products: [],
+      productNames: [],
+      selectedProductIdx: -1,
+      selectedProductName: '请选择产品',
+      selectedProduct: null,
+      materials: [],
+      materialGroups: [],
+      matchGroups: [],
+    })
+    this.loadProducts(bank.id)
+  },
+
+  onProductChange(e: WechatMiniprogram.PickerChange) {
+    const idx = parseInt(e.detail.value as string, 10)
+    const product = this.data.products[idx]
+    if (!product) return
+    this.setData({
+      selectedProductIdx: idx,
+      selectedProductName: product.name,
+      selectedProduct: product,
+      materials: [],
+      materialGroups: [],
+      matchGroups: [],
+    })
+    this.loadMaterials(product.id)
   },
 
   onTabTap(e: WechatMiniprogram.TouchEvent) {
     this.setData({ activeTab: e.currentTarget.dataset['key'] as BankTab })
+  },
+
+  onCreateReportTask() {
+    const { customers, products, selectedCustomerIdx, selectedProductIdx } = this.data
+    const customer = customers[selectedCustomerIdx]
+    const product = products[selectedProductIdx]
+    if (!customer || !product) {
+      wx.showToast({ title: '请先选择客户和产品', icon: 'none' })
+      return
+    }
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    this.setData({ creating: true })
+    wx.request({
+      url: `${API_BASE}/reports`,
+      method: 'POST',
+      header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: { customerId: customer.id, productId: product.id },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: { id?: number } }
+        this.setData({ creating: false })
+        if (payload.data?.id) {
+          wx.showModal({
+            title: '报告任务已创建',
+            content: `任务 #${payload.data.id} 已生成，AI 将开始填写字段草稿，稍后可在 AI填报 模块查看。`,
+            showCancel: false,
+            confirmText: '知道了',
+          })
+        } else {
+          wx.showToast({ title: '创建失败', icon: 'error' })
+        }
+      },
+      fail: () => {
+        this.setData({ creating: false })
+        wx.showToast({ title: '创建失败', icon: 'error' })
+      },
+    })
   },
 
   onAiInputChange(e: WechatMiniprogram.Input) {
@@ -70,12 +328,8 @@ Page({
   onAiSend() {
     const text = this.data.aiInput.trim()
     if (!text) return
-    const msgs = [...this.data.aiMessages, { role: 'user', text }, { role: 'ai', text: '已根据顾问要求修改材料说明：' + text + '。修改内容已进入材料包草稿，待顾问复核。' }]
+    const reply = '已记录修改意见，待顾问确认后更新材料包草稿。'
+    const msgs = [...this.data.aiMessages, { role: 'user', text }, { role: 'ai', text: reply }]
     this.setData({ aiMessages: msgs, aiInput: '' })
-    wx.showToast({ title: '已模拟更新材料包草稿', icon: 'none' })
   },
 })
-
-// Suppress unused import warnings
-const _unused = { UPLOADED_DOCS, MISSING_DOCS, mockMaterialGroups }
-void _unused

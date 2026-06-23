@@ -6,8 +6,9 @@
     <view class="profile-card">
       <view class="avatar"><text class="avatar-icon">👤</text></view>
       <view class="profile-info">
-        <text class="profile-name">{{user.name}}</text>
-        <text class="profile-phone">{{user.phone}}</text>
+        <text class="profile-name">{{name}}</text>
+        <text class="profile-phone" wx:if="{{phone}}">{{phone}}</text>
+        <text class="profile-phone" wx:else>韬纪元AI 客户</text>
       </view>
       <view class="login-badge"><text>已登录</text></view>
     </view>
@@ -15,17 +16,27 @@
     <!-- Documents -->
     <view class="card">
       <text class="card-title">个人/企业资料</text>
-      <view class="info-row"><text class="label">个人资料</text><text class="value">身份证明、手机号、联系人</text></view>
-      <view class="info-row"><text class="label">企业资料</text><text class="value">营业执照、经营信息</text></view>
-      <view class="info-row"><text class="label">资料空间</text><text class="value">{{user.storage}}</text></view>
+      <view class="info-row">
+        <text class="label">个人资料</text>
+        <text class="value">{{personalDocSummary}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">企业资料</text>
+        <text class="value">{{businessDocSummary}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">已上传</text>
+        <text class="value">{{loading ? '加载中…' : docCount + ' 份文件'}}</text>
+      </view>
     </view>
 
     <!-- Service info -->
     <view class="card">
       <text class="card-title">服务信息</text>
-      <view class="info-row"><text class="label">当前顾问</text><text class="value">{{user.advisor}} · 韬纪元AI</text></view>
-      <view class="info-row"><text class="label">资料状态</text><text class="value">{{user.currentStage}}</text></view>
-      <view class="info-row"><text class="label">最近进度</text><text class="value">{{user.latestProgress}}</text></view>
+      <view class="info-row">
+        <text class="label">当前顾问</text>
+        <text class="value">{{advisorName ? advisorName + ' · 韬纪元AI' : '暂无顾问'}}</text>
+      </view>
     </view>
 
     <!-- Quick links -->
@@ -60,6 +71,4 @@
 
     <view style="height: 20rpx" />
   </scroll-view>
-
-
 </view>

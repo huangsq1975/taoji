@@ -1,44 +1,113 @@
 .page-wrap { display: flex; flex-direction: column; height: 100vh; background: #f8fbff; }
 
-.selector-bar { display: flex; flex-direction: row; background: #fff; border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0; }
-.selector-item { flex: 1; display: flex; flex-direction: row; align-items: center; padding: 20rpx 24rpx; gap: 8rpx; border-right: 1rpx solid #e5e7eb; }
-.selector-item:last-child { border-right: none; }
+/* Selector rows */
+.selector-bar {
+  display: flex; flex-direction: row; background: #fff;
+  border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0;
+}
+.selector-item {
+  flex: 1; display: flex; flex-direction: row; align-items: center;
+  padding: 20rpx 24rpx; gap: 8rpx; border-right: 1rpx solid #e5e7eb;
+}
+.selector-item-last { border-right: none; }
+
+.product-bar {
+  background: #fff; border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0;
+}
+.product-selector {
+  display: flex; flex-direction: row; align-items: center;
+  padding: 16rpx 24rpx; gap: 8rpx;
+}
+.product-val {
+  flex: 1; font-size: 26rpx; color: #185FA5; font-weight: 600;
+}
+
 .selector-label { font-size: 22rpx; color: #94a3b8; flex-shrink: 0; }
 .selector-val { font-size: 24rpx; color: #172033; font-weight: 500; flex: 1; }
 .selector-arrow { font-size: 20rpx; color: #94a3b8; }
 
-.tab-bar { display: flex; flex-direction: row; background: #fff; border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0; }
-.tab-item { flex: 1; padding: 20rpx 0; text-align: center; font-size: 26rpx; color: #64748b; border-bottom: 3rpx solid transparent; }
+/* Tabs */
+.tab-bar {
+  display: flex; flex-direction: row; background: #fff;
+  border-bottom: 1rpx solid #e5e7eb; flex-shrink: 0;
+}
+.tab-item {
+  flex: 1; padding: 20rpx 0; text-align: center;
+  font-size: 26rpx; color: #64748b; border-bottom: 3rpx solid transparent;
+}
 .tab-item.active { color: #185FA5; border-bottom-color: #185FA5; font-weight: 600; }
 
+/* Content */
 .scroll-area { flex: 1; padding: 16rpx 24rpx 0; }
+.state-tip { padding: 60rpx 0; text-align: center; font-size: 26rpx; color: #94a3b8; }
 
+/* Cards */
 .card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .card-title { font-size: 28rpx; font-weight: 700; color: #172033; margin-bottom: 8rpx; display: block; }
 .card-note { font-size: 24rpx; color: #64748b; display: block; margin-bottom: 16rpx; }
 
-.info-row { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; padding: 12rpx 0; border-bottom: 1rpx solid #f0f4f8; gap: 16rpx; font-size: 26rpx; }
+.info-row {
+  display: flex; flex-direction: row; justify-content: space-between;
+  align-items: flex-start; padding: 12rpx 0; border-bottom: 1rpx solid #f0f4f8; gap: 16rpx;
+  font-size: 26rpx;
+}
 .info-row:last-child { border-bottom: none; }
 .label { color: #94a3b8; flex-shrink: 0; }
 .value { color: #172033; font-weight: 500; text-align: right; flex: 1; }
 
-.material-row { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; padding: 16rpx 0; border-bottom: 1rpx solid #f0f4f8; gap: 16rpx; }
+/* Material rows */
+.material-row {
+  display: flex; flex-direction: row; justify-content: space-between;
+  align-items: flex-start; padding: 16rpx 0; border-bottom: 1rpx solid #f0f4f8; gap: 16rpx;
+}
 .material-row:last-child { border-bottom: none; }
 .material-info { flex: 1; }
 .material-name { font-size: 28rpx; font-weight: 600; color: #172033; display: block; }
 .material-source { font-size: 22rpx; color: #64748b; margin-top: 4rpx; display: block; }
+.material-note { font-size: 22rpx; color: #94a3b8; margin-top: 2rpx; display: block; }
 
-.badge { display: inline-flex; align-items: center; padding: 4rpx 14rpx; border-radius: 100rpx; font-size: 22rpx; font-weight: 600; flex-shrink: 0; }
-.badge-ok { background: #ecfdf5; color: #059669; }
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center; padding: 4rpx 14rpx;
+  border-radius: 100rpx; font-size: 22rpx; font-weight: 600; flex-shrink: 0;
+}
+.badge-ok   { background: #ecfdf5; color: #059669; }
 .badge-warn { background: #fffbeb; color: #d97706; }
+.badge-gray { background: #f1f5f9; color: #64748b; }
 
-.note-box { background: #fffbeb; border-radius: 12rpx; padding: 16rpx 20rpx; margin-bottom: 16rpx; font-size: 24rpx; color: #92400e; line-height: 1.6; }
+/* Note box */
+.note-box {
+  background: #fffbeb; border-radius: 12rpx; padding: 16rpx 20rpx;
+  margin-bottom: 16rpx; font-size: 24rpx; color: #92400e; line-height: 1.6;
+}
 
+/* Match header */
+.match-header { padding: 20rpx 24rpx; }
+.match-header-text { font-size: 28rpx; font-weight: 700; color: #172033; display: block; margin-bottom: 6rpx; }
+.match-sub { font-size: 24rpx; color: #64748b; }
+
+/* Report task button */
+.report-btn {
+  padding: 26rpx; background: #185FA5; border-radius: 100rpx;
+  text-align: center; font-size: 30rpx; font-weight: 600; color: #fff; margin-bottom: 16rpx;
+}
+.report-btn-disabled { background: #93c5fd; }
+.report-hint { font-size: 22rpx; color: #94a3b8; text-align: center; display: block; }
+
+/* AI chat */
 .ai-chat { display: flex; flex-direction: column; gap: 16rpx; margin-bottom: 20rpx; }
-.ai-msg { max-width: 80%; padding: 16rpx 20rpx; border-radius: 16rpx; font-size: 26rpx; line-height: 1.6; }
-.ai-msg-ai { background: #f0f0ff; color: #172033; align-self: flex-start; border: 1rpx solid #e0e7ff; }
+.ai-msg {
+  max-width: 80%; padding: 16rpx 20rpx; border-radius: 16rpx;
+  font-size: 26rpx; line-height: 1.6;
+}
+.ai-msg-ai  { background: #f0f0ff; color: #172033; align-self: flex-start; border: 1rpx solid #e0e7ff; }
 .ai-msg-user { background: #185FA5; color: #fff; align-self: flex-end; }
-
 .ai-input-row { display: flex; flex-direction: row; gap: 16rpx; align-items: center; }
-.ai-input { flex: 1; height: 68rpx; background: #f1f5f9; border-radius: 100rpx; padding: 0 24rpx; font-size: 26rpx; color: #172033; }
-.ai-send-btn { padding: 14rpx 28rpx; background: #185FA5; border-radius: 100rpx; color: #fff; font-size: 26rpx; font-weight: 600; flex-shrink: 0; }
+.ai-input {
+  flex: 1; height: 68rpx; background: #f1f5f9; border-radius: 100rpx;
+  padding: 0 24rpx; font-size: 26rpx; color: #172033;
+}
+.ai-send-btn {
+  padding: 14rpx 28rpx; background: #185FA5; border-radius: 100rpx;
+  color: #fff; font-size: 26rpx; font-weight: 600; flex-shrink: 0;
+}
