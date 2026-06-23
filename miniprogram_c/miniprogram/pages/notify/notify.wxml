@@ -2,7 +2,11 @@
   <navigation-bar title="消息通知" background="#fff" color="#172033" />
 
   <scroll-view scroll-y class="scroll-area">
-    <view class="card">
+    <view wx:if="{{loading}}" class="state-tip">加载中…</view>
+
+    <view wx:elif="{{empty}}" class="state-tip">暂无通知</view>
+
+    <view wx:else class="card">
       <view
         wx:for="{{notifications}}"
         wx:key="id"
@@ -18,8 +22,7 @@
         </view>
       </view>
     </view>
-    <text class="footer-note">仅展示近7天通知</text>
+
+    <text wx:if="{{!loading && !empty}}" class="footer-note">仅展示近7天通知</text>
   </scroll-view>
-
-
 </view>
