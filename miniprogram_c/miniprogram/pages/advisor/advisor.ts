@@ -1,16 +1,75 @@
+import { API_BASE } from '../../utils/config'
+
+interface ProfileData {
+  advisorName: string | null
+  advisorPhone: string | null
+  advisorLatestMessage: string | null
+}
+
+const app = getApp<IAppOption>()
+
 Page({
   data: {
-    advisor: {
-      name: '张顾问',
-      role: '韬纪元AI · 高级助贷顾问',
-      stats: '服务客户 86 位 · 好评率 98%',
-      phone: '13800138000',
-      message: '陈总，当前资料已进入银行材料整理阶段。现在主要缺征信授权书和近6个月经营流水，补齐后我会继续复核材料包，并同步下一步处理结果。',
-    },
+    loading: true,
+    advisorName: '',
+    advisorPhone: '',
+    advisorMessage: '',
+    hasAdvisor: false,
+  },
+
+  onLoad() {
+    if (app.globalData.loginDone) {
+      this.loadAdvisorInfo()
+    } else {
+      app.loginReadyCallback = () => this.loadAdvisorInfo()
+    }
+  },
+
+  onShow() {
+    if (app.globalData.loginDone) {
+      this.loadAdvisorInfo()
+    }
+  },
+
+  loadAdvisorInfo() {
+    const token = app.globalData.token
+    if (!token) {
+      this.setData({ loading: false })
+      return
+    }
+    wx.request({
+      url: `${API_BASE}/c/profile`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ProfileData }
+        const d = payload.data
+        if (!d) {
+          this.setData({ loading: false })
+          return
+        }
+        const hasAdvisor = !!d.advisorName
+        this.setData({
+          loading: false,
+          hasAdvisor,
+          advisorName: d.advisorName || '暂未分配',
+          advisorPhone: d.advisorPhone || '',
+          advisorMessage: d.advisorLatestMessage || (hasAdvisor ? '您好！如有任何疑问，请随时与我联系。' : ''),
+        })
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      },
+    })
   },
 
   onPhoneCall() {
-    const phone = this.data.advisor.phone
+    const phone = this.data.advisorPhone
+    if (!phone) {
+      wx.showToast({ title: '暂无顾问电话', icon: 'none' })
+      return
+    }
     wx.makePhoneCall({
       phoneNumber: phone,
       fail: () => {
@@ -20,6 +79,6 @@ Page({
   },
 
   onWechatTap() {
-    wx.showToast({ title: '已模拟打开微信聊天', icon: 'none' })
+    wx.showToast({ title: '请通过微信搜索顾问账号联系', icon: 'none' })
   },
 })

@@ -52,9 +52,10 @@ Page({
     scrollToId: '',
     statusBarHeight: 0,
     userName: '您',
+    sessionId: null as number | null,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string>) {
     wx.getSystemInfo({
       success: (res) => {
         this.setData({ statusBarHeight: res.statusBarHeight })
@@ -64,14 +65,51 @@ Page({
     if (user) {
       this.setData({ userName: user.name })
     }
-    // If login already completed, check immediately; otherwise register callback
-    if (app.globalData.loginDone) {
-      this.checkAndShowAdvisorSheet()
-    } else {
-      app.loginReadyCallback = () => {
-        this.checkAndShowAdvisorSheet()
-      }
+
+    const sessionIdStr = options['sessionId']
+    if (sessionIdStr) {
+      this.setData({ sessionId: parseInt(sessionIdStr, 10) })
     }
+
+    if (app.globalData.loginDone) {
+      this.onLoginReady()
+    } else {
+      app.loginReadyCallback = () => this.onLoginReady()
+    }
+  },
+
+  onLoginReady() {
+    if (this.data.sessionId) {
+      this.loadSession(this.data.sessionId)
+    } else {
+      this.checkAndShowAdvisorSheet()
+    }
+  },
+
+  loadSession(sessionId: number) {
+    const token = app.globalData.token
+    if (!token) return
+    wx.request({
+      url: `${API_BASE}/c/chat/sessions/${sessionId}/messages`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as {
+          data?: Array<{ id: number; role: string; content: string; created_at: string }>
+        }
+        const msgs: ChatMessage[] = (payload.data ?? []).map(m => ({
+          id: String(m.id),
+          role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+          content: m.content,
+          time: (m.created_at ?? '').replace('T', ' ').slice(11, 16),
+        }))
+        const last = msgs[msgs.length - 1]
+        this.setData({ messages: msgs, scrollToId: last?.id ?? '' })
+      },
+      fail: () => {
+        wx.showToast({ title: '加载对话失败', icon: 'none' })
+      },
+    })
   },
 
   checkAndShowAdvisorSheet() {
@@ -115,7 +153,6 @@ Page({
     }
     const advisor = this.data.advisorList[idx]
     wx.showLoading({ title: '绑定中...' })
-    // Obtain a fresh wx code (the original one was consumed at app launch)
     wx.login({
       success: (wxRes) => {
         wx.request({
@@ -189,13 +226,53 @@ Page({
     const thinkingId = genId()
     const thinking: ChatMessage = { id: thinkingId, role: 'ai', content: '正在分析...', time: '' }
     this.setData({ messages: [...this.data.messages, thinking] })
-    setTimeout(() => {
-      const reply = getAiReply(userText)
-      const msgs = this.data.messages.map(m =>
-        m.id === thinkingId ? { ...m, content: reply, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) } : m
-      )
-      this.setData({ messages: msgs, scrollToId: thinkingId })
-    }, 600)
+
+    const token = app.globalData.token
+    if (token) {
+      wx.request({
+        url: `${API_BASE}/c/chat/send`,
+        method: 'POST',
+        header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        data: {
+          content: userText,
+          sessionId: this.data.sessionId ?? undefined,
+          customerId: app.globalData.customerId ?? undefined,
+          source: 'c_end',
+        },
+        success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+          const payload = res.data as { data?: { sessionId?: number; content?: string } }
+          const d = payload.data
+          const reply = d?.content ?? '收到，顾问将尽快处理。'
+          const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          if (d?.sessionId && !this.data.sessionId) {
+            this.setData({ sessionId: d.sessionId })
+          }
+          const msgs = this.data.messages.map(m =>
+            m.id === thinkingId ? { ...m, content: reply, time } : m
+          )
+          this.setData({ messages: msgs, scrollToId: thinkingId })
+        },
+        fail: () => {
+          // Fall back to local mock
+          const reply = getAiReply(userText)
+          const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          const msgs = this.data.messages.map(m =>
+            m.id === thinkingId ? { ...m, content: reply, time } : m
+          )
+          this.setData({ messages: msgs, scrollToId: thinkingId })
+        },
+      })
+    } else {
+      // No token — local mock
+      setTimeout(() => {
+        const reply = getAiReply(userText)
+        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        const msgs = this.data.messages.map(m =>
+          m.id === thinkingId ? { ...m, content: reply, time } : m
+        )
+        this.setData({ messages: msgs, scrollToId: thinkingId })
+      }, 600)
+    }
   },
 
   // ─── Upload flow ────────────────────────────────────────────────────────────
@@ -249,7 +326,7 @@ Page({
   },
 
   onNewChat() {
-    this.setData({ messages: [], sidebarVisible: false })
+    this.setData({ messages: [], sidebarVisible: false, sessionId: null })
   },
 
   onMenuTap() {

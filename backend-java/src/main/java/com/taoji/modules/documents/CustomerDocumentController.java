@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * C端客户文档接口：客户上传和查询自己的文档。
@@ -44,6 +45,66 @@ public class CustomerDocumentController {
     @Operation(summary = "客户文档列表", description = "返回当前客户上传的所有文档")
     public ApiResponse<List<DocumentResponse>> listDocuments(@CurrentUser JwtUserDetails currentUser) {
         return ApiResponse.ok(documentService.listDocuments(currentUser.getUserId()));
+    }
+
+    private static final Map<String, String> STATUS_LABELS = Map.of(
+            "COLLECTING", "资料收集中",
+            "REVIEWING", "AI资料分析中",
+            "REPORTING", "银行材料整理中",
+            "SUBMITTED", "已提交银行",
+            "DONE", "办理完成",
+            "PAUSED", "暂停"
+    );
+
+    @GetMapping("/profile")
+    @Operation(summary = "客户个人资料", description = "返回客户姓名、当前阶段、顾问信息、融资方向")
+    public ApiResponse<Map<String, Object>> getProfile(@CurrentUser JwtUserDetails currentUser) {
+        if (currentUser == null) throw AppException.unauthorized("请先登录");
+        Long customerId = currentUser.getUserId();
+
+        Record customer = dsl.select(
+                        DSL.field("c.id"),
+                        DSL.field("c.name"),
+                        DSL.field("c.status"),
+                        DSL.field("c.doc_completeness"),
+                        DSL.field("c.financing_need"),
+                        DSL.field("c.loan_amount"),
+                        DSL.field("c.advisor_id"),
+                        DSL.field("u.name").as("advisor_name"),
+                        DSL.field("u.phone").as("advisor_phone")
+                )
+                .from(DSL.table("customers").as("c"))
+                .leftJoin(DSL.table("users").as("u"))
+                .on(DSL.field("c.advisor_id").eq(DSL.field("u.id")))
+                .where(DSL.field("c.id").eq(customerId))
+                .and(DSL.field("c.deleted_at").isNull())
+                .fetchOne();
+
+        if (customer == null) throw AppException.notFound("客户信息不存在");
+
+        // Latest advisor message
+        Map<String, Object> latestFollowUp = dsl.select(DSL.field("content"))
+                .from(DSL.table("follow_up_records"))
+                .where(DSL.field("customer_id").eq(customerId))
+                .and(DSL.field("advisor_id").isNotNull())
+                .orderBy(DSL.field("created_at").desc())
+                .limit(1)
+                .fetchOneMap();
+
+        String status = customer.get(DSL.field("status")).toString();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("customerId", customerId);
+        result.put("name", customer.get(DSL.field("name", String.class)));
+        result.put("status", status);
+        result.put("statusLabel", STATUS_LABELS.getOrDefault(status, status));
+        result.put("advisorId", customer.get(DSL.field("advisor_id", Long.class)));
+        result.put("advisorName", customer.get(DSL.field("advisor_name", String.class)));
+        result.put("advisorPhone", customer.get(DSL.field("advisor_phone", String.class)));
+        result.put("financingNeed", customer.get(DSL.field("financing_need", String.class)));
+        result.put("loanAmount", customer.get(DSL.field("loan_amount")));
+        result.put("docCompleteness", customer.get(DSL.field("doc_completeness", Integer.class)));
+        result.put("advisorLatestMessage", latestFollowUp != null ? latestFollowUp.get("content") : null);
+        return ApiResponse.ok(result);
     }
 
     @GetMapping("/progress")

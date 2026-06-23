@@ -8,6 +8,20 @@ interface DocumentItem {
   aiParseStatus: string
 }
 
+interface ProfileData {
+  customerId: number
+  name: string
+  status: string
+  statusLabel: string
+  advisorId: number | null
+  advisorName: string | null
+  advisorPhone: string | null
+  financingNeed: string | null
+  loanAmount: number | null
+  docCompleteness: number
+  advisorLatestMessage: string | null
+}
+
 const DOC_TYPE_LABELS: Record<string, string> = {
   ID_CARD: '身份证',
   CREDIT_REPORT: '征信报告',
@@ -21,13 +35,25 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 const PERSONAL_DOC_TYPES = new Set(['ID_CARD', 'CREDIT_REPORT'])
 
+function formatAmount(amount: number | null): string {
+  if (!amount || amount === 0) return ''
+  if (amount >= 10000) {
+    const wan = amount / 10000
+    return wan % 1 === 0 ? `${wan}万元` : `${wan.toFixed(1)}万元`
+  }
+  return `${Math.round(amount)}元`
+}
+
 const app = getApp<IAppOption>()
 
 Page({
   data: {
     name: '',
-    phone: '',
+    statusLabel: '',
     advisorName: '',
+    financingNeed: '',
+    loanAmountLabel: '',
+    docCompleteness: 0,
     personalDocSummary: '暂无资料',
     businessDocSummary: '暂无资料',
     docCount: 0,
@@ -36,31 +62,54 @@ Page({
 
   onLoad() {
     if (app.globalData.loginDone) {
-      this.loadProfile()
+      this.loadAll()
     } else {
-      app.loginReadyCallback = () => this.loadProfile()
+      app.loginReadyCallback = () => this.loadAll()
     }
   },
 
   onShow() {
     if (app.globalData.loginDone) {
-      this.loadProfile()
+      this.loadAll()
     }
   },
 
-  loadProfile() {
-    const { userInfo, advisorId, token } = app.globalData
-    this.setData({
-      name: userInfo.name || '微信用户',
-      phone: userInfo.phone || '',
-    })
+  loadAll() {
+    const token = app.globalData.token
+    if (!token) {
+      this.setData({ loading: false })
+      return
+    }
+    this.loadProfile(token)
     this.loadDocuments(token)
-    if (advisorId) {
-      this.loadAdvisorName(advisorId)
-    }
   },
 
-  loadDocuments(token: string | null) {
+  loadProfile(token: string) {
+    wx.request({
+      url: `${API_BASE}/c/profile`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ProfileData }
+        const d = payload.data
+        if (!d) return
+        this.setData({
+          name: d.name || app.globalData.userInfo.name || '微信用户',
+          statusLabel: d.statusLabel || '',
+          advisorName: d.advisorName || '',
+          financingNeed: d.financingNeed || '',
+          loanAmountLabel: formatAmount(d.loanAmount),
+          docCompleteness: d.docCompleteness || 0,
+        })
+      },
+      fail: () => {
+        // Fall back to globalData name
+        this.setData({ name: app.globalData.userInfo.name || '微信用户' })
+      },
+    })
+  },
+
+  loadDocuments(token: string) {
     wx.request({
       url: `${API_BASE}/c/documents`,
       method: 'GET',
@@ -95,21 +144,6 @@ Page({
     })
   },
 
-  loadAdvisorName(advisorId: number) {
-    wx.request({
-      url: `${API_BASE}/c/advisors`,
-      method: 'GET',
-      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
-        const payload = res.data as { data?: Array<{ id: number; name: string }> }
-        const advisors = payload.data ?? []
-        const found = advisors.find(a => a.id === advisorId)
-        if (found) {
-          this.setData({ advisorName: found.name })
-        }
-      },
-    })
-  },
-
   onAdvisorTap() {
     wx.navigateTo({ url: '/pages/advisor/advisor' })
   },
@@ -120,6 +154,10 @@ Page({
 
   onHistoryTap() {
     wx.navigateTo({ url: '/pages/history/history' })
+  },
+
+  onProgressTap() {
+    wx.redirectTo({ url: '/pages/progress/progress' })
   },
 
   onLogout() {

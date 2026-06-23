@@ -3,8 +3,10 @@
   <scroll-view scroll-y class="scroll-area">
     <text class="desc">统一管理您的资料授权状态，确保融资申请资料整理正常进行。</text>
 
-    <view class="card">
-      <view wx:for="{{authItems}}" wx:key="name" class="auth-item">
+    <view wx:if="{{loading}}" class="state-tip">加载中…</view>
+
+    <view wx:else class="card">
+      <view wx:for="{{authItems}}" wx:key="authType" class="auth-item">
         <view class="auth-header">
           <view class="auth-title-wrap">
             <text class="auth-name">{{item.name}}</text>
@@ -16,13 +18,31 @@
           <text class="auth-target">授权对象：{{item.target}}</text>
           <text wx:if="{{item.time}}" class="auth-time">授权时间：{{item.time}}</text>
         </view>
-        <view wx:if="{{item.status === 'pending'}}" class="auth-action" bindtap="onUploadAuth">
+        <view
+          wx:if="{{item.status === 'pending'}}"
+          class="auth-action"
+          bindtap="onUploadAuth"
+          data-auth-type="{{item.authType}}"
+          data-name="{{item.name}}"
+        >
           <text>上传授权文件</text>
         </view>
-        <view wx:elif="{{item.status === 'not_applied'}}" class="auth-action" bindtap="onApplyAuth" data-name="{{item.name}}">
+        <view
+          wx:elif="{{item.status === 'not_applied'}}"
+          class="auth-action"
+          bindtap="onApplyAuth"
+          data-auth-type="{{item.authType}}"
+          data-name="{{item.name}}"
+        >
           <text>发起授权</text>
         </view>
-        <view wx:elif="{{item.status === 'authorized'}}" class="auth-action auth-action-revoke" bindtap="onRevokeAuth" data-name="{{item.name}}">
+        <view
+          wx:elif="{{item.status === 'authorized'}}"
+          class="auth-action auth-action-revoke"
+          bindtap="onRevokeAuth"
+          data-auth-type="{{item.authType}}"
+          data-name="{{item.name}}"
+        >
           <text>撤销授权</text>
         </view>
         <view class="auth-divider" wx:if="{{index < authItems.length - 1}}" />

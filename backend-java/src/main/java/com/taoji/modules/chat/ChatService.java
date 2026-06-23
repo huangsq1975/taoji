@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,53 @@ public class ChatService {
                 "content", aiResponse,
                 "createdAt", LocalDateTime.now().toString()
         );
+    }
+
+    public List<Map<String, Object>> listSessionsForCustomer(Long customerId) {
+        // Fetch sessions with first user message (title) and last message (preview)
+        List<Map<String, Object>> rows = dsl.fetch(
+                "SELECT s.id, s.created_at, " +
+                "(SELECT content FROM chat_messages WHERE session_id = s.id AND role = 'user' " +
+                " ORDER BY created_at ASC LIMIT 1) AS first_content, " +
+                "(SELECT content FROM chat_messages WHERE session_id = s.id " +
+                " ORDER BY created_at DESC LIMIT 1) AS last_content, " +
+                "(SELECT created_at FROM chat_messages WHERE session_id = s.id " +
+                " ORDER BY created_at DESC LIMIT 1) AS last_msg_time " +
+                "FROM chat_sessions s WHERE s.customer_id = ? AND s.source = 'c_end' " +
+                "ORDER BY s.created_at DESC LIMIT 20",
+                customerId
+        ).intoMaps();
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            String firstContent = row.get("first_content") != null ? row.get("first_content").toString() : null;
+            String lastContent  = row.get("last_content")  != null ? row.get("last_content").toString()  : null;
+
+            String title   = firstContent != null && !firstContent.isBlank()
+                    ? (firstContent.length() > 24 ? firstContent.substring(0, 24) + "…" : firstContent)
+                    : "空对话";
+            String preview = lastContent != null && !lastContent.isBlank()
+                    ? (lastContent.length() > 40 ? lastContent.substring(0, 40) + "…" : lastContent)
+                    : "";
+
+            // Prefer last message time, fall back to session created_at
+            Object timeObj = row.get("last_msg_time") != null ? row.get("last_msg_time") : row.get("created_at");
+            String time = "";
+            if (timeObj instanceof LocalDateTime ldt) {
+                time = ldt.format(fmt);
+            } else if (timeObj instanceof java.sql.Timestamp ts) {
+                time = ts.toLocalDateTime().format(fmt);
+            }
+
+            java.util.LinkedHashMap<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", row.get("id"));
+            item.put("title", title);
+            item.put("preview", preview);
+            item.put("time", time);
+            result.add(item);
+        }
+        return result;
     }
 
     public List<Map<String, Object>> getSessionMessages(Long sessionId) {

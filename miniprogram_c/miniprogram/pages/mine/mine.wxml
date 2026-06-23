@@ -6,16 +6,16 @@
     <view class="profile-card">
       <view class="avatar"><text class="avatar-icon">👤</text></view>
       <view class="profile-info">
-        <text class="profile-name">{{name}}</text>
-        <text class="profile-phone" wx:if="{{phone}}">{{phone}}</text>
-        <text class="profile-phone" wx:else>韬纪元AI 客户</text>
+        <text class="profile-name">{{name || '微信用户'}}</text>
+        <text class="profile-stage" wx:if="{{statusLabel}}">{{statusLabel}}</text>
+        <text class="profile-stage" wx:else>韬纪元AI 客户</text>
       </view>
       <view class="login-badge"><text>已登录</text></view>
     </view>
 
     <!-- Documents -->
     <view class="card">
-      <text class="card-title">个人/企业资料</text>
+      <text class="card-title">资料概览</text>
       <view class="info-row">
         <text class="label">个人资料</text>
         <text class="value">{{personalDocSummary}}</text>
@@ -28,6 +28,10 @@
         <text class="label">已上传</text>
         <text class="value">{{loading ? '加载中…' : docCount + ' 份文件'}}</text>
       </view>
+      <view class="info-row" wx:if="{{docCompleteness > 0}}">
+        <text class="label">资料完整度</text>
+        <text class="value completeness">{{docCompleteness}}%</text>
+      </view>
     </view>
 
     <!-- Service info -->
@@ -37,11 +41,27 @@
         <text class="label">当前顾问</text>
         <text class="value">{{advisorName ? advisorName + ' · 韬纪元AI' : '暂无顾问'}}</text>
       </view>
+      <view class="info-row" wx:if="{{statusLabel}}">
+        <text class="label">办理阶段</text>
+        <text class="value">{{statusLabel}}</text>
+      </view>
+      <view class="info-row" wx:if="{{financingNeed}}">
+        <text class="label">融资方向</text>
+        <text class="value">{{financingNeed}}</text>
+      </view>
+      <view class="info-row" wx:if="{{loanAmountLabel}}">
+        <text class="label">目标金额</text>
+        <text class="value">{{loanAmountLabel}}</text>
+      </view>
     </view>
 
     <!-- Quick links -->
     <view class="card">
       <text class="card-title">快速入口</text>
+      <view class="link-row" bindtap="onProgressTap">
+        <text class="link-label">办理进度</text>
+        <text class="link-arrow">›</text>
+      </view>
       <view class="link-row" bindtap="onAdvisorTap">
         <text class="link-label">联系顾问</text>
         <text class="link-arrow">›</text>
@@ -54,14 +74,6 @@
         <text class="link-label">历史对话</text>
         <text class="link-arrow">›</text>
       </view>
-    </view>
-
-    <!-- Settings -->
-    <view class="card">
-      <text class="card-title">设置</text>
-      <view class="info-row"><text class="label">通知偏好</text><text class="value">资料进展、顾问留言</text></view>
-      <view class="info-row"><text class="label">隐私协议</text><text class="value">已同意 · 查看详情</text></view>
-      <view class="info-row"><text class="label">帮助中心</text><text class="value">常见问题、联系客服</text></view>
     </view>
 
     <!-- Logout -->

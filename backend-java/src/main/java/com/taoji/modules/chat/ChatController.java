@@ -1,7 +1,10 @@
 package com.taoji.modules.chat;
 
 import com.taoji.common.ApiResponse;
+import com.taoji.common.AppException;
 import com.taoji.modules.chat.dto.SendMessageRequest;
+import com.taoji.security.CurrentUser;
+import com.taoji.security.JwtUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,6 +35,14 @@ public class ChatController {
     public ApiResponse<Map<String, Object>> sendMessage(
             @Valid @RequestBody SendMessageRequest request) {
         return ApiResponse.ok(chatService.sendMessage(request));
+    }
+
+    @GetMapping("/sessions")
+    @Operation(summary = "获取当前客户的会话列表", description = "返回近20条历史对话，含首条用户消息作为标题和最后一条消息作为预览")
+    public ApiResponse<List<Map<String, Object>>> listSessions(
+            @CurrentUser JwtUserDetails currentUser) {
+        if (currentUser == null) throw AppException.unauthorized("请先登录");
+        return ApiResponse.ok(chatService.listSessionsForCustomer(currentUser.getUserId()));
     }
 
     @GetMapping("/sessions/{sessionId}/messages")

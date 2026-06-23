@@ -1,19 +1,24 @@
 <view class="page-wrap">
   <navigation-bar title="历史对话" background="#fff" color="#172033" />
   <scroll-view scroll-y class="scroll-area">
-    <view class="card">
+    <view wx:if="{{loading}}" class="state-tip">加载中…</view>
+
+    <view wx:elif="{{empty}}" class="state-tip">暂无历史对话</view>
+
+    <view wx:else class="card">
       <view
         wx:for="{{historyList}}"
         wx:key="id"
         class="history-item"
         bindtap="onItemTap"
-        data-title="{{item.title}}"
+        data-id="{{item.id}}"
       >
         <text class="history-title">{{item.title}}</text>
         <text class="history-preview">{{item.preview}}</text>
         <text class="history-time">{{item.time}}</text>
       </view>
     </view>
-    <text class="footer-note">仅展示近7天对话记录</text>
+
+    <text wx:if="{{!loading && !empty}}" class="footer-note">仅展示近20条对话记录</text>
   </scroll-view>
 </view>
