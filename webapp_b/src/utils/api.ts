@@ -625,6 +625,21 @@ export function regenerateApiKey() {
   return api.post<ApiApiConfig & { apiKeyFull: string }>('/settings/api-config/regenerate-key', {})
 }
 
+// AI Chat (advisor panel, B-end)
+export interface AdvisorChatResponse {
+  sessionId: number
+  content: string
+}
+
+export function sendAdvisorChat(body: {
+  content: string
+  sessionId?: number
+  customerId?: number
+  source: string
+}) {
+  return api.post<AdvisorChatResponse>('/c/chat/send', body)
+}
+
 // Advisor invite QR code — returns a blob URL for the PNG image
 export function getAdvisorInviteQrcode(): Promise<string> {
   const token = getToken()
