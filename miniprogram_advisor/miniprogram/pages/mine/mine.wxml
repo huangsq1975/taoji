@@ -6,17 +6,17 @@
       <view class="avatar"><text class="avatar-icon">👨‍💼</text></view>
       <view class="profile-info">
         <text class="profile-name">{{advisor.name}}</text>
-        <text class="profile-role">{{advisor.role}}</text>
+        <text class="profile-role">{{advisor.roleLabel}}</text>
       </view>
-      <view class="status-badge"><text>{{advisor.status}}</text></view>
+      <view class="status-badge"><text>在职</text></view>
     </view>
 
     <!-- Role info -->
     <view class="card">
       <text class="card-title">角色信息</text>
       <view class="info-row"><text class="label">所属机构</text><text class="value">{{advisor.institution}}</text></view>
-      <view class="info-row"><text class="label">角色</text><text class="value">高级助贷顾问 · 企业资料作业</text></view>
-      <view class="info-row"><text class="label">职责</text><text class="value">客户资料收集、银行材料整理、AI复核</text></view>
+      <view class="info-row"><text class="label">角色</text><text class="value">{{advisor.roleLabel}}</text></view>
+      <view class="info-row"><text class="label">套餐</text><text class="value">{{planName}}</text></view>
     </view>
 
     <!-- My clients -->
@@ -33,20 +33,26 @@
     <!-- Quota -->
     <view class="card">
       <text class="card-title">调用次数</text>
-      <view class="info-row"><text class="label">剩余调用</text><text class="value blue-text">{{quotaRemaining}} 次</text></view>
+      <view class="info-row"><text class="label">剩余调用</text><text class="value blue-text">{{quotaRemainingLabel}} 次</text></view>
       <view class="info-row"><text class="label">AI填表</text><text class="value">已用 {{quotaFill}} 次</text></view>
       <view class="info-row"><text class="label">材料包</text><text class="value">已用 {{quotaExport}} 次</text></view>
     </view>
 
-    <!-- Notifications -->
+    <!-- Recent activity -->
     <view class="card">
-      <text class="card-title">消息通知</text>
-      <view wx:for="{{notifications}}" wx:key="id" class="notify-item">
-        <view class="notify-dot dot-{{item.dotColor}}" />
-        <view class="notify-body">
-          <text class="notify-title">{{item.title}}</text>
-          <text class="notify-text">{{item.body}}</text>
-          <text class="notify-time">{{item.time}}</text>
+      <text class="card-title">近期动态</text>
+      <view class="state-tip" wx:if="{{loadingActivity}}"><text>加载中…</text></view>
+      <view class="state-tip" wx:elif="{{recentActivity.length === 0}}"><text>暂无近期动态</text></view>
+      <view wx:else>
+        <view wx:for="{{recentActivity}}" wx:key="id" class="activity-item">
+          <view class="activity-body">
+            <view class="activity-top">
+              <text class="activity-title">{{item.title}}</text>
+              <view class="badge {{item.statusClass}}"><text>{{item.statusLabel}}</text></view>
+            </view>
+            <text class="activity-sub">{{item.body}}</text>
+            <text class="activity-time">{{item.time}}</text>
+          </view>
         </view>
       </view>
     </view>

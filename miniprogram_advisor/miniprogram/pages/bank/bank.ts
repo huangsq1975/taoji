@@ -85,8 +85,11 @@ Page({
 
     aiInput: '',
     aiMessages: [
-      { role: 'ai', text: '告诉我材料说明哪里不对，我会生成修改建议，等待顾问复核。' },
-    ] as Array<{ role: string; text: string }>,
+      { id: 'init', role: 'ai', text: '告诉我材料说明哪里不对，我会生成修改建议，等待顾问复核。' },
+    ] as Array<{ id: string; role: string; text: string }>,
+    aiSending: false,
+    aiSessionId: null as number | null,
+    aiScrollToId: '',
   },
 
   onLoad(options: Record<string, string>) {
@@ -127,9 +130,11 @@ Page({
   },
 
   loadBanks() {
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
     wx.request({
       url: `${API_BASE}/banks`,
       method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
         const payload = res.data as { data?: ApiBank[] }
         const banks = payload.data ?? []
@@ -147,9 +152,11 @@ Page({
   },
 
   loadProducts(bankId: number) {
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
     wx.request({
       url: `${API_BASE}/banks/products?bankId=${bankId}`,
       method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
         const payload = res.data as { data?: ApiProduct[] }
         const products = payload.data ?? []
@@ -243,6 +250,7 @@ Page({
       selectedCustomerName: customer.name,
       customerDocs: [],
       matchGroups: [],
+      aiSessionId: null,
     })
     this.loadCustomerDocs(customer.id)
   },
@@ -262,6 +270,7 @@ Page({
       materials: [],
       materialGroups: [],
       matchGroups: [],
+      aiSessionId: null,
     })
     this.loadProducts(bank.id)
   },
@@ -277,6 +286,7 @@ Page({
       materials: [],
       materialGroups: [],
       matchGroups: [],
+      aiSessionId: null,
     })
     this.loadMaterials(product.id)
   },
@@ -301,9 +311,9 @@ Page({
       header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       data: { customerId: customer.id, productId: product.id },
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
-        const payload = res.data as { data?: { id?: number } }
         this.setData({ creating: false })
-        if (payload.data?.id) {
+        const payload = res.data as { data?: { id?: number }; statusCode?: number }
+        if (res.statusCode === 200 && payload.data?.id) {
           wx.showModal({
             title: '报告任务已创建',
             content: `任务 #${payload.data.id} 已生成，AI 将开始填写字段草稿，稍后可在 AI填报 模块查看。`,
@@ -327,9 +337,63 @@ Page({
 
   onAiSend() {
     const text = this.data.aiInput.trim()
-    if (!text) return
-    const reply = '已记录修改意见，待顾问确认后更新材料包草稿。'
-    const msgs = [...this.data.aiMessages, { role: 'user', text }, { role: 'ai', text: reply }]
-    this.setData({ aiMessages: msgs, aiInput: '' })
+    if (!text || this.data.aiSending) return
+
+    const uid = 'u' + Date.now()
+    const tid = 't' + Date.now()
+    const customer = this.data.customers[this.data.selectedCustomerIdx]
+    const product = this.data.selectedProduct
+
+    const msgs = [
+      ...this.data.aiMessages,
+      { id: uid, role: 'user', text },
+      { id: tid, role: 'ai', text: '正在分析...' },
+    ]
+    this.setData({ aiMessages: msgs, aiInput: '', aiSending: true, aiScrollToId: tid })
+
+    const finishWithReply = (reply: string) => {
+      const updated = this.data.aiMessages.map(m =>
+        m.id === tid ? { ...m, text: reply } : m
+      )
+      this.setData({ aiMessages: updated, aiSending: false, aiScrollToId: tid })
+    }
+
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    if (token) {
+      // Build context prefix so AI knows what product/customer we're editing
+      const ctxPrefix = customer && product
+        ? `【银行材料整理 · ${customer.name} · ${product.name}】\n${text}`
+        : text
+      wx.request({
+        url: `${API_BASE}/c/chat/send`,
+        method: 'POST',
+        header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        data: {
+          content: ctxPrefix,
+          sessionId: this.data.aiSessionId ?? undefined,
+          customerId: customer?.id ?? undefined,
+          source: 'advisor_mobile',
+        },
+        success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+          const payload = res.data as { data?: { sessionId?: number; content?: string } }
+          const d = payload.data
+          if (res.statusCode === 200 && d?.content) {
+            if (d.sessionId && !this.data.aiSessionId) {
+              this.setData({ aiSessionId: d.sessionId })
+            }
+            finishWithReply(d.content)
+          } else {
+            finishWithReply('已记录修改意见，待顾问确认后更新材料包草稿。')
+          }
+        },
+        fail: () => {
+          finishWithReply('已记录修改意见，待顾问确认后更新材料包草稿。')
+        },
+      })
+    } else {
+      setTimeout(() => {
+        finishWithReply('已记录修改意见，待顾问确认后更新材料包草稿。')
+      }, 500)
+    }
   },
 })

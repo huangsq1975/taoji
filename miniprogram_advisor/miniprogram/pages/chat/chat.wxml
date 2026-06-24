@@ -23,7 +23,7 @@
       <text class="welcome-title">顾问作业台</text>
       <text class="welcome-sub">AI帮你整理银行材料、识别资料缺口、优化沟通话术</text>
       <view class="pill-list">
-        <view wx:for="{{quickPills}}" wx:key="*this" class="quick-pill" bindtap="onPillTap" data-text="{{item}}">
+        <view wx:for="{{quickPills}}" wx:key="*this" class="quick-pill {{sending ? 'quick-pill-disabled' : ''}}" bindtap="onPillTap" data-text="{{item}}">
           <text>{{item}}</text>
         </view>
       </view>
@@ -63,9 +63,10 @@
     </view>
     <input class="input-field" placeholder="描述作业需求或选择客户..."
       placeholder-class="input-placeholder" value="{{inputValue}}"
-      bindinput="onInputChange" confirm-type="send" bindconfirm="onSendTap" adjust-position />
-    <view class="send-btn {{inputValue ? 'send-btn-active' : ''}}" bindtap="onSendTap">
-      <text class="send-icon">➤</text>
+      bindinput="onInputChange" confirm-type="send" bindconfirm="onSendTap" adjust-position
+      disabled="{{sending}}" />
+    <view class="send-btn {{inputValue && !sending ? 'send-btn-active' : ''}}" bindtap="onSendTap">
+      <text class="send-icon">{{sending ? '…' : '➤'}}</text>
     </view>
   </view>
 
@@ -194,7 +195,7 @@
           value="{{searchKeyword}}" bindinput="onSearchInput" />
       </view>
       <scroll-view scroll-y class="picker-list">
-        <view wx:for="{{uploadCustomers}}" wx:key="id" class="picker-item"
+        <view wx:for="{{filteredCustomers}}" wx:key="id" class="picker-item"
           bindtap="onSelectCustomer" data-id="{{item.id}}">
           <view class="picker-item-main">
             <text class="picker-item-name">{{item.name}}</text>
@@ -203,6 +204,9 @@
             </view>
           </view>
           <text class="picker-item-sub">{{item.status}} · {{item.contactName}}</text>
+        </view>
+        <view wx:if="{{filteredCustomers.length === 0}}" class="picker-empty">
+          <text>未找到匹配客户</text>
         </view>
       </scroll-view>
       <view class="sheet-cancel" bindtap="onCustomerPickerClose"><text>取消</text></view>

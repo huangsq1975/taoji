@@ -1,32 +1,50 @@
-<view class="page-wrap" wx:if="{{customer}}">
+<view class="page-wrap">
   <navigation-bar title="客户详情" background="#fff" color="#172033" />
 
-  <scroll-view scroll-y class="scroll-area">
+  <!-- Loading state -->
+  <view wx:if="{{!customer}}" class="page-loading">
+    <text>加载中...</text>
+  </view>
+
+  <!-- Content -->
+  <scroll-view wx:else scroll-y class="scroll-area">
     <!-- Header -->
     <view class="client-header">
       <text class="client-name">{{customer.name}}</text>
       <view class="tag-row">
-        <view class="qual-tag"><text>{{customer.status}}</text></view>
+        <view class="qual-tag"><text>{{statusLabel}}</text></view>
+        <view wx:for="{{customer.labels}}" wx:key="*this" class="qual-tag">
+          <text>{{item}}</text>
+        </view>
       </view>
     </view>
 
     <!-- Profile -->
     <view class="card">
       <text class="card-title">客户信息</text>
-      <view class="info-row"><text class="label">融资需求</text><text class="value">{{customer.financingNeed}}</text></view>
-      <view class="info-row"><text class="label">联系人</text><text class="value">{{customer.contactName}}</text></view>
-      <view class="info-row"><text class="label">联系电话</text><text class="value">{{customer.contactPhone}}</text></view>
-      <view wx:if="{{customer.loanAmount}}" class="info-row">
-        <text class="label">贷款金额</text>
-        <text class="value">{{customer.loanAmount}} 元</text>
+      <view wx:if="{{customer.financingNeed}}" class="info-row">
+        <text class="label">融资需求</text><text class="value">{{customer.financingNeed}}</text>
+      </view>
+      <view wx:if="{{customer.loanPurpose}}" class="info-row">
+        <text class="label">用途说明</text><text class="value">{{customer.loanPurpose}}</text>
+      </view>
+      <view wx:if="{{customer.contactName}}" class="info-row">
+        <text class="label">联系人</text><text class="value">{{customer.contactName}}</text>
+      </view>
+      <view wx:if="{{customer.contactPhone}}" class="info-row">
+        <text class="label">联系电话</text><text class="value">{{customer.contactPhone}}</text>
+      </view>
+      <view wx:if="{{loanAmountLabel}}" class="info-row">
+        <text class="label">贷款金额</text><text class="value">{{loanAmountLabel}}</text>
+      </view>
+      <view wx:if="{{customer.advisorName}}" class="info-row">
+        <text class="label">负责顾问</text><text class="value">{{customer.advisorName}}</text>
       </view>
       <view wx:if="{{customer.aiSummary}}" class="info-row">
-        <text class="label">AI摘要</text>
-        <text class="value">{{customer.aiSummary}}</text>
+        <text class="label">AI摘要</text><text class="value">{{customer.aiSummary}}</text>
       </view>
       <view wx:if="{{customer.riskNotes}}" class="info-row">
-        <text class="label">风险备注</text>
-        <text class="value warn-text">{{customer.riskNotes}}</text>
+        <text class="label">风险备注</text><text class="value warn-text">{{customer.riskNotes}}</text>
       </view>
     </view>
 
@@ -55,11 +73,7 @@
       </view>
 
       <view wx:if="{{loadingDocs}}" class="doc-loading"><text>加载中...</text></view>
-
-      <view wx:elif="{{documents.length === 0}}" class="doc-empty">
-        <text>暂无已上传资料</text>
-      </view>
-
+      <view wx:elif="{{documents.length === 0}}" class="doc-empty"><text>暂无已上传资料</text></view>
       <view wx:else>
         <view wx:for="{{documents}}" wx:key="id" class="doc-item">
           <view class="doc-item-left">
@@ -72,6 +86,31 @@
                 {{parseStatusLabels[item.aiParseStatus] ?? item.aiParseStatus}}
               </text>
             </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Follow-up records -->
+    <view class="card">
+      <view class="doc-section-head">
+        <text class="card-title" style="margin-bottom:0">跟进记录</text>
+        <view class="upload-btn" bindtap="onAddFollowUpTap">
+          <text class="upload-btn-icon">⊕</text>
+          <text class="upload-btn-label">添加记录</text>
+        </view>
+      </view>
+      <view wx:if="{{followUps.length === 0}}" class="doc-empty"><text>暂无跟进记录</text></view>
+      <view wx:else>
+        <view wx:for="{{followUps}}" wx:key="id" class="followup-item">
+          <view class="followup-dot" />
+          <view class="followup-body">
+            <view class="followup-head">
+              <view class="followup-type-badge"><text>{{followUpTypeLabels[item.type] ?? item.type}}</text></view>
+              <text class="followup-time">{{item.createdAt}}</text>
+            </view>
+            <text class="followup-content">{{item.content}}</text>
+            <text wx:if="{{item.advisorName}}" class="followup-author">— {{item.advisorName}}</text>
           </view>
         </view>
       </view>
@@ -118,6 +157,33 @@
       </view>
       <view class="sheet-gap" />
       <view class="sheet-cancel" bindtap="onDocTypeSheetClose"><text>取消</text></view>
+    </view>
+  </view>
+
+  <!-- Add follow-up sheet -->
+  <view wx:if="{{addFollowUpVisible}}" class="sheet-mask" bindtap="onFollowUpClose">
+    <view class="sheet" catchtap="">
+      <view class="doc-type-header">
+        <text class="doc-type-title">添加跟进记录</text>
+      </view>
+      <view class="followup-form">
+        <picker mode="selector" range="{{followUpTypes}}" range-key="label"
+          value="{{selectedFollowUpTypeIdx}}" bindchange="onFollowUpTypeChange">
+          <view class="followup-picker">
+            <text class="followup-picker-label">记录类型</text>
+            <text class="followup-picker-value">{{followUpTypes[selectedFollowUpTypeIdx].label}}</text>
+            <text class="followup-picker-arrow">▼</text>
+          </view>
+        </picker>
+        <textarea class="followup-textarea" placeholder="填写跟进内容..."
+          value="{{followUpContent}}" bindinput="onFollowUpContentInput"
+          maxlength="500" auto-height />
+      </view>
+      <view class="followup-submit-btn {{followUpContent ? 'followup-submit-active' : ''}}" bindtap="onSubmitFollowUp">
+        <text>确认添加</text>
+      </view>
+      <view class="sheet-gap" />
+      <view class="sheet-cancel" bindtap="onFollowUpClose"><text>取消</text></view>
     </view>
   </view>
 </view>

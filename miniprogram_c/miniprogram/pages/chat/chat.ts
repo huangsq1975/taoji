@@ -53,6 +53,7 @@ Page({
     statusBarHeight: 0,
     userName: '您',
     sessionId: null as number | null,
+    sending: false,
   },
 
   onLoad(options: Record<string, string>) {
@@ -198,13 +199,14 @@ Page({
 
   onSendTap() {
     const text = this.data.inputValue.trim()
-    if (!text) return
+    if (!text || this.data.sending) return
     this.setData({ inputValue: '' })
     this.addMessage('user', text)
     this.replyAI(text)
   },
 
   onPillTap(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.sending) return
     const text = e.currentTarget.dataset['text'] as string
     this.addMessage('user', text)
     this.replyAI(text)
@@ -225,7 +227,15 @@ Page({
   replyAI(userText: string) {
     const thinkingId = genId()
     const thinking: ChatMessage = { id: thinkingId, role: 'ai', content: '正在分析...', time: '' }
-    this.setData({ messages: [...this.data.messages, thinking] })
+    this.setData({ messages: [...this.data.messages, thinking], sending: true })
+
+    const finishWithReply = (reply: string) => {
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      const msgs = this.data.messages.map(m =>
+        m.id === thinkingId ? { ...m, content: reply, time } : m
+      )
+      this.setData({ messages: msgs, scrollToId: thinkingId, sending: false })
+    }
 
     const token = app.globalData.token
     if (token) {
@@ -242,35 +252,23 @@ Page({
         success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
           const payload = res.data as { data?: { sessionId?: number; content?: string } }
           const d = payload.data
-          const reply = d?.content ?? '收到，顾问将尽快处理。'
-          const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-          if (d?.sessionId && !this.data.sessionId) {
-            this.setData({ sessionId: d.sessionId })
+          if (res.statusCode === 200 && d?.content) {
+            if (d.sessionId && !this.data.sessionId) {
+              this.setData({ sessionId: d.sessionId })
+            }
+            finishWithReply(d.content)
+          } else {
+            finishWithReply(getAiReply(userText))
           }
-          const msgs = this.data.messages.map(m =>
-            m.id === thinkingId ? { ...m, content: reply, time } : m
-          )
-          this.setData({ messages: msgs, scrollToId: thinkingId })
         },
         fail: () => {
-          // Fall back to local mock
-          const reply = getAiReply(userText)
-          const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-          const msgs = this.data.messages.map(m =>
-            m.id === thinkingId ? { ...m, content: reply, time } : m
-          )
-          this.setData({ messages: msgs, scrollToId: thinkingId })
+          finishWithReply(getAiReply(userText))
         },
       })
     } else {
       // No token — local mock
       setTimeout(() => {
-        const reply = getAiReply(userText)
-        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-        const msgs = this.data.messages.map(m =>
-          m.id === thinkingId ? { ...m, content: reply, time } : m
-        )
-        this.setData({ messages: msgs, scrollToId: thinkingId })
+        finishWithReply(getAiReply(userText))
       }, 600)
     }
   },
@@ -326,7 +324,7 @@ Page({
   },
 
   onNewChat() {
-    this.setData({ messages: [], sidebarVisible: false, sessionId: null })
+    this.setData({ messages: [], sidebarVisible: false, sessionId: null, sending: false })
   },
 
   onMenuTap() {
@@ -419,6 +417,7 @@ Page({
   },
 
   onCreditTap() {
+    if (this.data.sending) return
     this.setData({ sidebarVisible: false })
     this.addMessage('user', '查企业征信')
     this.replyAI('查企业征信')

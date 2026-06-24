@@ -5,12 +5,15 @@ interface ApiCustomer {
   name: string
   status?: string
   docCompleteness?: number
-  contactName?: string
-  contactPhone?: string
-  financingNeed?: string
-  loanAmount?: number
-  aiSummary?: string
-  riskNotes?: string
+  contactName?: string | null
+  contactPhone?: string | null
+  financingNeed?: string | null
+  loanPurpose?: string | null
+  loanAmount?: number | null
+  aiSummary?: string | null
+  riskNotes?: string | null
+  advisorName?: string | null
+  labels?: string[]
 }
 
 interface ApiDocument {
@@ -22,10 +25,23 @@ interface ApiDocument {
   createdAt?: string
 }
 
+interface ApiFollowUp {
+  id: number
+  type: string
+  content: string
+  createdAt: string
+  advisorName: string | null
+}
+
 interface DocTypeOption {
   label: string
   value: string
   icon: string
+}
+
+interface FollowUpTypeOption {
+  label: string
+  value: string
 }
 
 const DOC_TYPES: DocTypeOption[] = [
@@ -39,6 +55,12 @@ const DOC_TYPES: DocTypeOption[] = [
   { label: '其他', value: 'OTHER', icon: '📎' },
 ]
 
+const FOLLOW_UP_TYPES: FollowUpTypeOption[] = [
+  { label: '跟进备注', value: 'NOTE' },
+  { label: '补件请求', value: 'SUPPLEMENT_REQUEST' },
+  { label: '银行提交', value: 'BANK_SUBMIT' },
+]
+
 const DOC_TYPE_LABELS: Record<string, string> = {
   BUSINESS_LICENSE: '营业执照', BANK_STATEMENT: '银行流水', CREDIT_REPORT: '征信报告',
   TAX_INVOICE: '税务发票', PROPERTY_CERT: '房产证', ID_CARD: '身份证',
@@ -49,12 +71,46 @@ const PARSE_STATUS_LABELS: Record<string, string> = {
   PENDING: 'AI识别中', PROCESSING: '解析中', DONE: '已完成', FAILED: '识别失败',
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  COLLECTING: '资料收集中',
+  REVIEWING: '资料审核中',
+  REPORTING: 'AI填表中',
+  SUBMITTED: '已提交银行',
+  DONE: '已完结',
+  PAUSED: '已暂停',
+}
+
+const FOLLOW_UP_TYPE_LABELS: Record<string, string> = {
+  NOTE: '跟进备注',
+  SUPPLEMENT_REQUEST: '补件请求',
+  BANK_SUBMIT: '银行提交',
+  BANK_FEEDBACK: '银行反馈',
+  SYSTEM: '系统通知',
+}
+
+function formatLoanAmount(amount: number | null | undefined): string {
+  if (!amount) return ''
+  if (amount >= 100000000) return (amount / 100000000).toFixed(1).replace('.0', '') + '亿元'
+  if (amount >= 10000) return Math.round(amount / 10000) + '万元'
+  return amount + '元'
+}
+
+function formatTime(isoStr: string): string {
+  // "2026-06-23T10:30:00" → "06-23 10:30"
+  return isoStr.replace('T', ' ').slice(5, 16)
+}
+
 Page({
   data: {
     customerId: 0,
     customer: null as ApiCustomer | null,
+    statusLabel: '',
+    loanAmountLabel: '',
     documents: [] as ApiDocument[],
     loadingDocs: false,
+    followUps: [] as ApiFollowUp[],
+    followUpTypeLabels: FOLLOW_UP_TYPE_LABELS,
+    // Upload flow
     uploadSheetVisible: false,
     docTypeSheetVisible: false,
     docTypes: DOC_TYPES,
@@ -63,6 +119,12 @@ Page({
     uploading: false,
     docTypeLabels: DOC_TYPE_LABELS,
     parseStatusLabels: PARSE_STATUS_LABELS,
+    // Add follow-up
+    addFollowUpVisible: false,
+    followUpTypes: FOLLOW_UP_TYPES,
+    selectedFollowUpTypeIdx: 0,
+    followUpContent: '',
+    submittingFollowUp: false,
   },
 
   onLoad(options: Record<string, string>) {
@@ -74,11 +136,15 @@ Page({
     this.setData({ customerId: id })
     this.loadCustomer(id)
     this.loadDocuments(id)
+    this.loadFollowUps(id)
   },
 
   onShow() {
     const id = this.data.customerId
-    if (id) this.loadDocuments(id)
+    if (id) {
+      this.loadDocuments(id)
+      this.loadFollowUps(id)
+    }
   },
 
   loadCustomer(id: number) {
@@ -89,8 +155,13 @@ Page({
       header: { Authorization: `Bearer ${token}` },
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
         const payload = res.data as { data?: ApiCustomer }
-        if (payload.data) {
-          this.setData({ customer: payload.data })
+        const c = payload.data
+        if (c) {
+          this.setData({
+            customer: c,
+            statusLabel: STATUS_LABELS[c.status ?? ''] ?? c.status ?? '',
+            loanAmountLabel: formatLoanAmount(c.loanAmount),
+          })
         }
       },
       fail: () => {
@@ -116,13 +187,32 @@ Page({
     })
   },
 
+  loadFollowUps(id: number) {
+    const token = wx.getStorageSync('token') as string
+    wx.request({
+      url: `${API_BASE}/customers/${id}/follow-ups`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as { data?: ApiFollowUp[] }
+        const followUps = (payload.data || []).map(f => ({
+          ...f,
+          createdAt: formatTime(f.createdAt),
+        }))
+        this.setData({ followUps })
+      },
+      fail: () => { /* silent */ },
+    })
+  },
+
   onBankTap() {
     const id = this.data.customerId
     if (id) wx.navigateTo({ url: '/pages/bank/bank?customerId=' + id })
   },
 
   onRemindTap() {
-    wx.showToast({ title: '已发送资料缺口提醒', icon: 'success' })
+    const idx = FOLLOW_UP_TYPES.findIndex(t => t.value === 'SUPPLEMENT_REQUEST')
+    this.setData({ addFollowUpVisible: true, selectedFollowUpTypeIdx: idx >= 0 ? idx : 0, followUpContent: '' })
   },
 
   // ─── Upload flow ─────────────────────────────────────────────────────────────
@@ -214,6 +304,60 @@ Page({
         wx.hideLoading()
         this.setData({ uploading: false, pendingFilePath: '', pendingFileName: '' })
         wx.showToast({ title: '上传失败，请检查网络', icon: 'none' })
+      },
+    })
+  },
+
+  // ─── Follow-up ────────────────────────────────────────────────────────────────
+
+  onAddFollowUpTap() {
+    this.setData({ addFollowUpVisible: true, selectedFollowUpTypeIdx: 0, followUpContent: '' })
+  },
+
+  onFollowUpClose() {
+    this.setData({ addFollowUpVisible: false, followUpContent: '' })
+  },
+
+  onFollowUpTypeChange(e: WechatMiniprogram.PickerChange) {
+    this.setData({ selectedFollowUpTypeIdx: Number(e.detail.value) })
+  },
+
+  onFollowUpContentInput(e: WechatMiniprogram.Input) {
+    this.setData({ followUpContent: e.detail.value })
+  },
+
+  onSubmitFollowUp() {
+    const content = this.data.followUpContent.trim()
+    if (!content) {
+      wx.showToast({ title: '请填写跟进内容', icon: 'none' })
+      return
+    }
+    if (this.data.submittingFollowUp) return
+    const type = this.data.followUpTypes[this.data.selectedFollowUpTypeIdx].value
+    const token = wx.getStorageSync('token') as string
+    this.setData({ submittingFollowUp: true })
+    wx.showLoading({ title: '提交中...' })
+    wx.request({
+      url: `${API_BASE}/customers/${this.data.customerId}/follow-ups`,
+      method: 'POST',
+      header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: { type, content },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        wx.hideLoading()
+        this.setData({ submittingFollowUp: false })
+        const payload = res.data as { statusCode?: number }
+        if (res.statusCode === 200 && payload.statusCode === 200) {
+          wx.showToast({ title: '已添加', icon: 'success' })
+          this.setData({ addFollowUpVisible: false, followUpContent: '', selectedFollowUpTypeIdx: 0 })
+          this.loadFollowUps(this.data.customerId)
+        } else {
+          wx.showToast({ title: '提交失败，请重试', icon: 'none' })
+        }
+      },
+      fail: () => {
+        wx.hideLoading()
+        this.setData({ submittingFollowUp: false })
+        wx.showToast({ title: '提交失败，请检查网络', icon: 'none' })
       },
     })
   },

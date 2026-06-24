@@ -52,6 +52,7 @@
   background: #fff; border: 1rpx solid #dde7f3;
   border-radius: 100rpx; font-size: 27rpx; color: #185FA5; text-align: center;
 }
+.quick-pill-disabled { opacity: 0.45; }
 
 .msg-wrap { display: flex; flex-direction: column; margin-bottom: 28rpx; }
 .msg-wrap-user { align-items: flex-end; }

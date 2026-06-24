@@ -146,17 +146,20 @@
       <view class="card">
         <text class="card-title">AI 修改助手</text>
         <text class="card-note">告诉我材料说明哪里需要调整，AI 会生成修改建议。</text>
-        <view class="ai-chat">
-          <view wx:for="{{aiMessages}}" wx:key="{{index}}"
+        <scroll-view scroll-y class="ai-chat" scroll-into-view="{{aiScrollToId}}" scroll-with-animation>
+          <view wx:for="{{aiMessages}}" wx:key="id" id="{{item.id}}"
             class="ai-msg {{item.role === 'user' ? 'ai-msg-user' : 'ai-msg-ai'}}">
             <text>{{item.text}}</text>
           </view>
-        </view>
+        </scroll-view>
         <view class="ai-input-row">
           <input class="ai-input" placeholder="例如：把流水缺口写得更具体"
             value="{{aiInput}}" bindinput="onAiInputChange"
-            confirm-type="send" bindconfirm="onAiSend" />
-          <view class="ai-send-btn" bindtap="onAiSend"><text>发送</text></view>
+            confirm-type="send" bindconfirm="onAiSend"
+            disabled="{{aiSending}}" />
+          <view class="ai-send-btn {{aiSending ? 'ai-send-btn-disabled' : ''}}" bindtap="onAiSend">
+            <text>{{aiSending ? '…' : '发送'}}</text>
+          </view>
         </view>
       </view>
     </block>

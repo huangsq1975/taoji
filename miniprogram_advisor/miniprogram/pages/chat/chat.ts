@@ -55,9 +55,12 @@ Page({
     selectedCustomer: null as ApiCustomer | null,
     customerPickerVisible: false,
     searchKeyword: '',
+    filteredCustomers: [] as ApiCustomer[],
     scrollToId: '',
     statusBarHeight: 0,
     advisorName: '张顾问',
+    sessionId: null as number | null,
+    sending: false,
   },
 
   onLoad() {
@@ -88,7 +91,7 @@ Page({
       success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
         const payload = res.data as { data?: { items?: ApiCustomer[] } }
         const customers = payload.data?.items || []
-        this.setData({ uploadCustomers: customers })
+        this.setData({ uploadCustomers: customers, filteredCustomers: customers })
       },
       fail: () => { /* silent — upload will still show customer picker */ },
     })
@@ -100,13 +103,14 @@ Page({
 
   onSendTap() {
     const text = this.data.inputValue.trim()
-    if (!text) return
+    if (!text || this.data.sending) return
     this.setData({ inputValue: '' })
     this.addMessage('user', text)
     this.replyAI(text)
   },
 
   onPillTap(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.sending) return
     const text = e.currentTarget.dataset['text'] as string
     this.addMessage('user', text)
     this.replyAI(text)
@@ -126,21 +130,55 @@ Page({
   replyAI(userText: string) {
     const thinkingId = genId()
     const thinking: ChatMessage = { id: thinkingId, role: 'ai', content: '正在分析...', time: '' }
-    this.setData({ messages: [...this.data.messages, thinking] })
-    setTimeout(() => {
-      const customerName = this.data.selectedCustomer ? this.data.selectedCustomer.name : ''
-      const reply = getAdvisorAiReply(userText, customerName)
+    this.setData({ messages: [...this.data.messages, thinking], sending: true })
+
+    const customerName = this.data.selectedCustomer ? this.data.selectedCustomer.name : ''
+
+    const finishWithReply = (reply: string) => {
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       const msgs = this.data.messages.map(m =>
-        m.id === thinkingId
-          ? { ...m, content: reply, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }
-          : m
+        m.id === thinkingId ? { ...m, content: reply, time } : m
       )
-      this.setData({ messages: msgs, scrollToId: thinkingId })
-    }, 600)
+      this.setData({ messages: msgs, scrollToId: thinkingId, sending: false })
+    }
+
+    const token = wx.getStorageSync('token') as string
+    if (token) {
+      wx.request({
+        url: `${API_BASE}/c/chat/send`,
+        method: 'POST',
+        header: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        data: {
+          content: userText,
+          sessionId: this.data.sessionId ?? undefined,
+          customerId: this.data.selectedCustomer?.id ?? undefined,
+          source: 'advisor_mobile',
+        },
+        success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+          const payload = res.data as { data?: { sessionId?: number; content?: string } }
+          const d = payload.data
+          if (res.statusCode === 200 && d?.content) {
+            if (d.sessionId && !this.data.sessionId) {
+              this.setData({ sessionId: d.sessionId })
+            }
+            finishWithReply(d.content)
+          } else {
+            finishWithReply(getAdvisorAiReply(userText, customerName))
+          }
+        },
+        fail: () => {
+          finishWithReply(getAdvisorAiReply(userText, customerName))
+        },
+      })
+    } else {
+      setTimeout(() => {
+        finishWithReply(getAdvisorAiReply(userText, customerName))
+      }, 600)
+    }
   },
 
   onNewChat() {
-    this.setData({ messages: [], sidebarVisible: false })
+    this.setData({ messages: [], sidebarVisible: false, sessionId: null, sending: false })
   },
 
   onMenuTap() {
@@ -295,7 +333,7 @@ Page({
   // ─── Context bar (AI customer) ────────────────────────────────────────────────
 
   onContextBarTap() {
-    this.setData({ customerPickerVisible: true, sidebarVisible: false })
+    this.setData({ customerPickerVisible: true, sidebarVisible: false, searchKeyword: '', filteredCustomers: this.data.uploadCustomers })
   },
 
   onCustomerPickerClose() {
@@ -303,14 +341,22 @@ Page({
   },
 
   onSearchInput(e: WechatMiniprogram.Input) {
-    this.setData({ searchKeyword: e.detail.value })
+    const kw = e.detail.value.trim().toLowerCase()
+    const filtered = kw
+      ? this.data.uploadCustomers.filter(c =>
+          c.name.toLowerCase().includes(kw) ||
+          (c.contactName ?? '').toLowerCase().includes(kw)
+        )
+      : this.data.uploadCustomers
+    this.setData({ searchKeyword: e.detail.value, filteredCustomers: filtered })
   },
 
   onSelectCustomer(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset['id'])
     const c = this.data.uploadCustomers.find(x => x.id === id) || null
     if (!c) return
-    this.setData({ selectedCustomer: c, customerPickerVisible: false, searchKeyword: '' })
+    // Reset session when switching customer context
+    this.setData({ selectedCustomer: c, customerPickerVisible: false, searchKeyword: '', filteredCustomers: this.data.uploadCustomers, sessionId: null })
     this.addMessage('ai', '已切换到 ' + c.name + '，后续AI作业会基于该客户资料。')
   },
 

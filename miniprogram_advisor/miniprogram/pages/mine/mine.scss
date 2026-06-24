@@ -20,13 +20,17 @@
 .value { color: #172033; font-weight: 500; }
 .blue-text { color: #185FA5; }
 
-.notify-item { display: flex; flex-direction: row; gap: 20rpx; padding: 20rpx 0; border-bottom: 1rpx solid #f0f4f8; align-items: flex-start; }
-.notify-item:last-child { border-bottom: none; }
-.notify-dot { width: 16rpx; height: 16rpx; border-radius: 50%; margin-top: 10rpx; flex-shrink: 0; }
-.dot-blue { background: #185FA5; }
-.dot-green { background: #059669; }
-.dot-orange { background: #d97706; }
-.notify-body { flex: 1; }
-.notify-title { font-size: 27rpx; font-weight: 700; color: #172033; display: block; margin-bottom: 4rpx; }
-.notify-text { font-size: 24rpx; color: #64748b; line-height: 1.6; display: block; margin-bottom: 4rpx; }
-.notify-time { font-size: 22rpx; color: #94a3b8; }
+.state-tip { padding: 40rpx 0; text-align: center; font-size: 26rpx; color: #94a3b8; }
+
+.activity-item { padding: 20rpx 0; border-bottom: 1rpx solid #f0f4f8; }
+.activity-item:last-child { border-bottom: none; }
+.activity-body { flex: 1; }
+.activity-top { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 6rpx; }
+.activity-title { font-size: 27rpx; font-weight: 600; color: #172033; flex: 1; margin-right: 12rpx; }
+.activity-sub { font-size: 24rpx; color: #64748b; display: block; margin-bottom: 4rpx; }
+.activity-time { font-size: 22rpx; color: #94a3b8; display: block; }
+
+.badge { display: inline-flex; align-items: center; padding: 4rpx 14rpx; border-radius: 100rpx; font-size: 22rpx; font-weight: 600; flex-shrink: 0; }
+.status-done   { background: #ecfdf5; color: #059669; }
+.status-review { background: #eff6ff; color: #185FA5; }
+.status-active { background: #fffbeb; color: #d97706; }

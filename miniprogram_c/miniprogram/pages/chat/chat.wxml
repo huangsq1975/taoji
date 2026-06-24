@@ -26,7 +26,7 @@
         <view
           wx:for="{{quickPills}}"
           wx:key="*this"
-          class="quick-pill"
+          class="quick-pill {{sending ? 'quick-pill-disabled' : ''}}"
           bindtap="onPillTap"
           data-text="{{item}}"
         >
@@ -75,9 +75,10 @@
       confirm-type="send"
       bindconfirm="onSendTap"
       adjust-position
+      disabled="{{sending}}"
     />
-    <view class="send-btn {{inputValue ? 'send-btn-active' : ''}}" bindtap="onSendTap">
-      <text class="send-icon">➤</text>
+    <view class="send-btn {{inputValue && !sending ? 'send-btn-active' : ''}}" bindtap="onSendTap">
+      <text class="send-icon">{{sending ? '…' : '➤'}}</text>
     </view>
   </view>
 
