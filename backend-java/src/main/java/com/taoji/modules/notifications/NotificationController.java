@@ -44,7 +44,7 @@ public class NotificationController {
         LocalDateTime since = LocalDateTime.now().minusDays(7);
 
         // Fetch follow_up_records for this customer within last 7 days
-        List<Record> records = dsl.select(
+        var records = dsl.select(
                         DSL.field("f.id"),
                         DSL.field("f.type"),
                         DSL.field("f.content"),
