@@ -121,12 +121,10 @@ public class AuthorizationController {
         Long customerId = currentUser.getUserId();
 
         // Check if an active (pending or signed) record already exists
-        Integer activeCount = dsl.fetch(
-                "SELECT COUNT(*)::int AS cnt FROM customer_authorizations WHERE customer_id = ? " +
+        Integer activeCount = dsl.fetchValue(
+                "SELECT COUNT(*)::int FROM customer_authorizations WHERE customer_id = ? " +
                 "AND auth_type = ?::auth_type AND status IN ('pending'::auth_status, 'signed'::auth_status)",
-                customerId, authType)
-                .get(0)
-                .get("cnt", Integer.class);
+                customerId, authType);
         if (activeCount != null && activeCount > 0) {
             throw AppException.badRequest("授权已存在，无需重复申请");
         }
