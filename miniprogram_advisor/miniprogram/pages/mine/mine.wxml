@@ -57,6 +57,17 @@
       </view>
     </view>
 
+    <!-- Invite -->
+    <view class="invite-card" bindtap="onInviteTap">
+      <view class="invite-left">
+        <text class="invite-title">邀请客户</text>
+        <text class="invite-sub">扫码绑定，资料直达您的工作台</text>
+      </view>
+      <view class="invite-icon-wrap">
+        <text class="invite-icon">⬛</text>
+      </view>
+    </view>
+
     <!-- Settings -->
     <view class="card">
       <text class="card-title">设置</text>
@@ -67,4 +78,28 @@
 
     <view style="height: 40rpx" />
   </scroll-view>
+
+  <!-- QR Code Modal -->
+  <view wx:if="{{qrVisible}}" class="qr-mask" bindtap="onCloseQrModal">
+    <view class="qr-modal" catchtap="">
+      <text class="qr-modal-title">专属邀请码</text>
+      <text class="qr-modal-sub">客户微信扫码后自动绑定到您名下</text>
+
+      <view class="qr-box">
+        <view wx:if="{{qrLoading}}" class="qr-loading"><text>生成中…</text></view>
+        <image wx:else src="{{qrSrc}}" class="qr-image" mode="aspectFit" />
+      </view>
+
+      <view class="qr-name"><text>{{advisor.name}} · {{advisor.institution}}</text></view>
+
+      <view class="qr-actions">
+        <view class="qr-btn-save" bindtap="onSaveQr">
+          <text>保存到相册</text>
+        </view>
+        <view class="qr-btn-close" bindtap="onCloseQrModal">
+          <text>关闭</text>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>

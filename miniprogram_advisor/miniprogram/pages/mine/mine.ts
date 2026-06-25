@@ -1,6 +1,8 @@
 const API_BASE = 'http://localhost:3000/api/v1'
 const app = getApp<IAppOption>()
 
+const QR_TEMP_PATH = `${wx.env.USER_DATA_PATH}/invite_qr.png`
+
 interface ApiCustomer {
   id: number
   name: string
@@ -96,6 +98,10 @@ Page({
     // Activity
     recentActivity: [] as ActivityItem[],
     loadingActivity: true,
+    // QR modal
+    qrVisible: false,
+    qrLoading: false,
+    qrSrc: '',
   },
 
   onLoad() {
@@ -174,5 +180,53 @@ Page({
 
   onClientsTap() {
     wx.navigateTo({ url: '/pages/clients/clients' })
+  },
+
+  onInviteTap() {
+    this.setData({ qrVisible: true })
+    if (this.data.qrSrc) return   // already cached
+    this.setData({ qrLoading: true })
+    const token = app.globalData.token ?? (wx.getStorageSync('token') as string)
+    wx.request({
+      url: `${API_BASE}/advisor/invite-qrcode`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      responseType: 'arraybuffer',
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        if (res.statusCode !== 200) {
+          this.setData({ qrLoading: false })
+          wx.showToast({ title: '二维码生成失败，请联系管理员配置微信凭证', icon: 'none' })
+          return
+        }
+        const base64 = wx.arrayBufferToBase64(res.data as ArrayBuffer)
+        this.setData({ qrSrc: `data:image/png;base64,${base64}`, qrLoading: false })
+      },
+      fail: () => {
+        this.setData({ qrLoading: false })
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      },
+    })
+  },
+
+  onCloseQrModal() {
+    this.setData({ qrVisible: false })
+  },
+
+  onSaveQr() {
+    if (!this.data.qrSrc) return
+    const base64 = this.data.qrSrc.replace('data:image/png;base64,', '')
+    wx.getFileSystemManager().writeFile({
+      filePath: QR_TEMP_PATH,
+      data: base64,
+      encoding: 'base64',
+      success: () => {
+        wx.saveImageToPhotosAlbum({
+          filePath: QR_TEMP_PATH,
+          success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+          fail: () => wx.showToast({ title: '请在设置中授权相册权限', icon: 'none' }),
+        })
+      },
+      fail: () => wx.showToast({ title: '保存失败，请重试', icon: 'none' }),
+    })
   },
 })
