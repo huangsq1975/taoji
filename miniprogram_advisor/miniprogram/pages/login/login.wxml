@@ -1,0 +1,43 @@
+<view class="page-wrap">
+  <view class="hero">
+    <text class="brand">韬纪元AI</text>
+    <text class="subtitle">助贷顾问工作台</text>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <text class="label">手机号</text>
+      <input
+        class="input"
+        type="number"
+        placeholder="请输入手机号"
+        placeholder-class="input-placeholder"
+        maxlength="11"
+        bindinput="onPhoneInput"
+      />
+    </view>
+
+    <view class="divider" />
+
+    <view class="field">
+      <text class="label">密码</text>
+      <input
+        class="input"
+        password
+        placeholder="请输入密码"
+        placeholder-class="input-placeholder"
+        bindinput="onPasswordInput"
+      />
+    </view>
+  </view>
+
+  <text wx:if="{{errMsg}}" class="err-msg">{{errMsg}}</text>
+
+  <button
+    class="btn-login {{loading ? 'btn-loading' : ''}}"
+    disabled="{{loading}}"
+    bindtap="onLoginTap"
+  >{{loading ? '登录中…' : '登录'}}</button>
+
+  <text class="hint">首次登录后将自动绑定微信，下次可直接进入</text>
+</view>

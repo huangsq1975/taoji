@@ -347,6 +347,25 @@ public class AuthService {
         );
     }
 
+    public void wxBind(Long userId, String code) {
+        String openid = fetchWxOpenid(code);
+        // Ensure no other user already holds this openid
+        Record conflict = dsl.select(DSL.field("id", Long.class))
+                .from(DSL.table("users"))
+                .where(DSL.field("wx_openid").eq(openid))
+                .and(DSL.field("id").ne(userId))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOne();
+        if (conflict != null) {
+            throw AppException.badRequest("该微信账号已绑定其他顾问账户");
+        }
+        dsl.update(DSL.table("users"))
+                .set(DSL.field("wx_openid"), openid)
+                .where(DSL.field("id").eq(userId))
+                .execute();
+        log.info("User {} bound wx_openid {}", userId, openid);
+    }
+
     public void changePassword(Long userId, ChangePasswordRequest request) {
         Record userRecord = dsl.select(DSL.field("password_hash", String.class))
                 .from(DSL.table("users"))

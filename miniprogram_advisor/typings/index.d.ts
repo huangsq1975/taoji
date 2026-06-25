@@ -9,6 +9,7 @@ interface IAppOption {
     }
     token?: string
     loginDone?: boolean
+    needsLogin?: boolean
   }
   loginReadyCallback: (() => void) | null
 }

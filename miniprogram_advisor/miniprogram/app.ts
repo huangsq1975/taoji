@@ -1,27 +1,36 @@
 const API_BASE = 'http://localhost:3000/api/v1'
 
+const ADVISOR_ROLES = ['advisor', 'supervisor', 'admin']
+
 App<IAppOption>({
   globalData: {
-    advisorInfo: {
-      name: '张顾问',
-      role: '高级助贷顾问',
-      institutionName: '韬纪元AI合作顾问团队',
-    },
+    advisorInfo: undefined,
     token: undefined,
     loginDone: false,
+    needsLogin: false,
   },
   loginReadyCallback: null,
+
   onLaunch() {
-    const cached = wx.getStorageSync('token') as string
-    if (cached) {
-      this.globalData.token = cached
-      this.globalData.loginDone = true
+    const fireReady = () => {
       if (this.loginReadyCallback) {
         this.loginReadyCallback()
         this.loginReadyCallback = null
       }
+    }
+
+    // Fast path: valid token already cached
+    const cached = wx.getStorageSync('token') as string
+    if (cached) {
+      this.globalData.token = cached
+      const info = wx.getStorageSync('advisorInfo') as typeof this.globalData.advisorInfo
+      if (info) this.globalData.advisorInfo = info
+      this.globalData.loginDone = true
+      fireReady()
       return
     }
+
+    // No token: try automatic login via WeChat openId binding
     wx.login({
       success: (res) => {
         wx.request({
@@ -32,30 +41,34 @@ App<IAppOption>({
             const payload = wxRes.data as {
               data?: { token?: string; name?: string; role?: string; institutionName?: string }
             }
-            const data = payload.data
-            if (data && data.token) {
-              wx.setStorageSync('token', data.token)
-              this.globalData.token = data.token
+            const d = payload.data
+            if (d?.token && ADVISOR_ROLES.includes(d.role ?? '')) {
+              wx.setStorageSync('token', d.token)
+              this.globalData.token = d.token
               this.globalData.advisorInfo = {
-                name: data.name || (this.globalData.advisorInfo ? this.globalData.advisorInfo.name : ''),
-                role: data.role || (this.globalData.advisorInfo ? this.globalData.advisorInfo.role : '顾问'),
-                institutionName: data.institutionName || (this.globalData.advisorInfo ? this.globalData.advisorInfo.institutionName : ''),
+                name: d.name ?? '',
+                role: d.role ?? '',
+                institutionName: d.institutionName ?? '',
               }
+              wx.setStorageSync('advisorInfo', this.globalData.advisorInfo)
+            } else {
+              // No binding found, or bound to a customer role — must login with phone + password
+              this.globalData.needsLogin = true
             }
             this.globalData.loginDone = true
-            if (this.loginReadyCallback) {
-              this.loginReadyCallback()
-              this.loginReadyCallback = null
-            }
+            fireReady()
           },
           fail: () => {
+            this.globalData.needsLogin = true
             this.globalData.loginDone = true
-            if (this.loginReadyCallback) {
-              this.loginReadyCallback()
-              this.loginReadyCallback = null
-            }
+            fireReady()
           },
         })
+      },
+      fail: () => {
+        this.globalData.needsLogin = true
+        this.globalData.loginDone = true
+        fireReady()
       },
     })
   },

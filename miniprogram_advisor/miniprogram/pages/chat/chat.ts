@@ -63,7 +63,7 @@ Page({
     sending: false,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string>) {
     wx.getSystemInfo({
       success: (res) => {
         this.setData({ statusBarHeight: res.statusBarHeight })
@@ -73,13 +73,50 @@ Page({
     if (info) {
       this.setData({ advisorName: info.name })
     }
+    const sessionIdStr = options['sessionId']
+    if (sessionIdStr) {
+      this.setData({ sessionId: parseInt(sessionIdStr, 10) })
+    }
     if (app.globalData.loginDone) {
-      this.loadUploadCustomers()
+      this.onLoginReady()
     } else {
       app.loginReadyCallback = () => {
-        this.loadUploadCustomers()
+        this.onLoginReady()
       }
     }
+  },
+
+  onLoginReady() {
+    if (this.data.sessionId) {
+      this.loadSession(this.data.sessionId)
+    }
+    this.loadUploadCustomers()
+  },
+
+  loadSession(sessionId: number) {
+    const token = wx.getStorageSync('token') as string
+    if (!token) return
+    wx.request({
+      url: `${API_BASE}/c/chat/sessions/${sessionId}/messages`,
+      method: 'GET',
+      header: { Authorization: `Bearer ${token}` },
+      success: (res: WechatMiniprogram.RequestSuccessCallbackResult) => {
+        const payload = res.data as {
+          data?: Array<{ id: number; role: string; content: string; created_at: string }>
+        }
+        const msgs: ChatMessage[] = (payload.data ?? []).map(m => ({
+          id: String(m.id),
+          role: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+          content: m.content,
+          time: (m.created_at ?? '').replace('T', ' ').slice(11, 16),
+        }))
+        const last = msgs[msgs.length - 1]
+        this.setData({ messages: msgs, scrollToId: last?.id ?? '' })
+      },
+      fail: () => {
+        wx.showToast({ title: '加载对话失败', icon: 'none' })
+      },
+    })
   },
 
   loadUploadCustomers() {

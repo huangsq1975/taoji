@@ -1,12 +1,13 @@
 {
   "pages": [
+    "pages/index/index",
+    "pages/login/login",
     "pages/chat/chat",
     "pages/clients/clients",
     "pages/client-detail/client-detail",
     "pages/bank/bank",
     "pages/mine/mine",
-    "pages/history/history",
-    "pages/index/index"
+    "pages/history/history"
   ],
   "window": {
     "navigationBarTextStyle": "black",

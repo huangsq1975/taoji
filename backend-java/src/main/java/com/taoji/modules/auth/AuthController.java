@@ -4,6 +4,7 @@ import com.taoji.common.ApiResponse;
 import com.taoji.modules.auth.dto.ChangePasswordRequest;
 import com.taoji.modules.auth.dto.LoginRequest;
 import com.taoji.modules.auth.dto.LoginResponse;
+import com.taoji.modules.auth.dto.WxBindRequest;
 import com.taoji.modules.auth.dto.WxLoginRequest;
 import com.taoji.security.CurrentUser;
 import com.taoji.security.JwtUserDetails;
@@ -45,6 +46,15 @@ public class AuthController {
     @Operation(summary = "获取当前用户信息", description = "返回当前登录用户的详细信息及权限列表")
     public ApiResponse<Map<String, Object>> me(@CurrentUser JwtUserDetails currentUser) {
         return ApiResponse.ok(authService.getCurrentUser(currentUser.getUserId()));
+    }
+
+    @PostMapping("/wx-bind")
+    @Operation(summary = "绑定微信", description = "顾问手机号密码登录后，将微信openId绑定到账户；下次可直接微信登录")
+    public ApiResponse<Void> wxBind(
+            @CurrentUser JwtUserDetails currentUser,
+            @Valid @RequestBody WxBindRequest request) {
+        authService.wxBind(currentUser.getUserId(), request.getCode());
+        return ApiResponse.ok(null);
     }
 
     @PostMapping("/change-password")
