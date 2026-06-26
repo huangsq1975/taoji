@@ -234,11 +234,13 @@ function DocumentsTab({ customerId }: { customerId: number }) {
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
     setUploading(true)
     try {
-      await uploadDocument(customerId, uploadDocType, file)
+      for (const file of files) {
+        await uploadDocument(customerId, uploadDocType, file)
+      }
       await fetchDocs()
     } catch (err) {
       alert(err instanceof Error ? err.message : '上传失败')
@@ -266,6 +268,7 @@ function DocumentsTab({ customerId }: { customerId: number }) {
         </button>
         <input ref={fileRef} type="file" style={{ display: 'none' }}
           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+          multiple
           onChange={handleFileChange} />
       </div>
 

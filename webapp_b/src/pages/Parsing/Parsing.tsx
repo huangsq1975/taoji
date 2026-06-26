@@ -129,7 +129,7 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
   const [customers, setCustomers] = useState<{ id: number; name: string }[]>([])
   const [customerId, setCustomerId] = useState('')
   const [docType, setDocType] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
@@ -140,11 +140,13 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
   }, [])
 
   async function handleUpload() {
-    if (!customerId || !docType || !file) { setErr('请填写所有必填项'); return }
+    if (!customerId || !docType || files.length === 0) { setErr('请填写所有必填项'); return }
     setLoading(true)
     setErr('')
     try {
-      await uploadDocument(Number(customerId), docType, file)
+      for (const file of files) {
+        await uploadDocument(Number(customerId), docType, file)
+      }
       onDone()
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : '上传失败')
@@ -181,8 +183,12 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
               type="file"
               className="form-file"
               accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
-              onChange={e => setFile(e.target.files?.[0] ?? null)}
+              multiple
+              onChange={e => setFiles(Array.from(e.target.files ?? []))}
             />
+            {files.length > 1 && (
+              <span className="form-hint">已选择 {files.length} 个文件</span>
+            )}
           </div>
           {err && <div className="form-error">{err}</div>}
         </div>
@@ -191,7 +197,7 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
           <button
             className="btn btn-primary"
             onClick={handleUpload}
-            disabled={loading || !customerId || !docType || !file}
+            disabled={loading || !customerId || !docType || files.length === 0}
           >
             {loading ? '上传中...' : '上传'}
           </button>
