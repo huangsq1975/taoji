@@ -30,9 +30,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Service
 @Slf4j
@@ -156,6 +159,82 @@ public class DocumentService {
                 .fetchOneInto(Long.class);
 
         return getDocumentById(docId);
+    }
+
+    @Transactional
+    public List<DocumentResponse> uploadZip(JwtUserDetails currentUser,
+                                             Long customerId,
+                                             String docType,
+                                             MultipartFile zipFile) {
+        Integer exists = dsl.selectCount()
+                .from(DSL.table("customers"))
+                .where(DSL.field("id").eq(customerId))
+                .and(DSL.field("institution_id").eq(currentUser.getInstitutionId()))
+                .and(DSL.field("deleted_at").isNull())
+                .fetchOneInto(Integer.class);
+        if (exists == null || exists == 0) {
+            throw AppException.notFound("客户不存在");
+        }
+
+        String datePath = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        Path dirPath = Paths.get(uploadDir, String.valueOf(currentUser.getInstitutionId()), datePath);
+
+        List<DocumentResponse> results = new ArrayList<>();
+
+        try {
+            Files.createDirectories(dirPath);
+            try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) {
+                        zis.closeEntry();
+                        continue;
+                    }
+                    String entryFilename = Paths.get(entry.getName()).getFileName().toString();
+                    // Skip macOS metadata and hidden files
+                    if (entryFilename.startsWith("__MACOSX") || entryFilename.startsWith(".")) {
+                        zis.closeEntry();
+                        continue;
+                    }
+
+                    String extension = getExtension(entryFilename);
+                    String storedName = UUID.randomUUID() + extension;
+                    Path filePath = dirPath.resolve(storedName);
+
+                    Files.copy(zis, filePath, StandardCopyOption.REPLACE_EXISTING);
+                    zis.closeEntry();
+
+                    String relativeUrl = "/" + currentUser.getInstitutionId() + "/" + datePath + "/" + storedName;
+                    String fileUrl = urlPrefix + relativeUrl;
+                    long fileSize = Files.size(filePath);
+
+                    Long docId = dsl.insertInto(DSL.table("customer_documents"))
+                            .set(DSL.field("customer_id"), customerId)
+                            .set(DSL.field("uploader_id"), currentUser.getUserId())
+                            .set(DSL.field("uploader_type", String.class), DSL.field("?::uploader_type", String.class, "advisor"))
+                            .set(DSL.field("doc_type", String.class), DSL.field("?::doc_type", String.class, docType))
+                            .set(DSL.field("file_name"), entryFilename)
+                            .set(DSL.field("file_url"), fileUrl)
+                            .set(DSL.field("file_size"), fileSize)
+                            .set(DSL.field("mime_type"), (String) null)
+                            .set(DSL.field("ai_parse_status", String.class), DSL.field("?::ai_parse_status", String.class, "PENDING"))
+                            .set(DSL.field("created_at"), LocalDateTime.now())
+                            .returningResult(DSL.field("id", Long.class))
+                            .fetchOneInto(Long.class);
+
+                    results.add(getDocumentById(docId));
+                }
+            }
+        } catch (IOException e) {
+            log.error("Failed to extract zip: {}", e.getMessage(), e);
+            throw AppException.internalError("ZIP解压失败");
+        }
+
+        if (results.isEmpty()) {
+            throw AppException.badRequest("ZIP文件中没有可处理的文件");
+        }
+
+        return results;
     }
 
     public List<DocumentResponse> listDocuments(Long customerId) {

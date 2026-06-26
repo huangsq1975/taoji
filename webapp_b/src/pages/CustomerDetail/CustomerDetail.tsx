@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, FormEvent, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  getCustomer, getCustomerOverview, listDocuments, uploadDocument, deleteDocument,
+  getCustomer, getCustomerOverview, listDocuments, uploadDocument, uploadZip, deleteDocument,
   listFollowUps, addFollowUp, listReportTasks, createReportTask, listBanks, listBankProducts,
   type ApiCustomer, type CustomerOverview, type ApiDocument, type ApiFollowUp, type ApiReportTask,
   type ApiBank, type ApiProduct,
@@ -239,7 +239,11 @@ function DocumentsTab({ customerId }: { customerId: number }) {
     setUploading(true)
     try {
       for (const file of files) {
-        await uploadDocument(customerId, uploadDocType, file)
+        if (file.name.toLowerCase().endsWith('.zip')) {
+          await uploadZip(customerId, uploadDocType, file)
+        } else {
+          await uploadDocument(customerId, uploadDocType, file)
+        }
       }
       await fetchDocs()
     } catch (err) {
@@ -267,7 +271,7 @@ function DocumentsTab({ customerId }: { customerId: number }) {
           {uploading ? '上传中…' : '📎 上传资料'}
         </button>
         <input ref={fileRef} type="file" style={{ display: 'none' }}
-          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip"
           multiple
           onChange={handleFileChange} />
       </div>

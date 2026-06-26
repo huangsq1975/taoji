@@ -5,6 +5,7 @@ import {
   retryParseDocument,
   listCustomers,
   uploadDocument,
+  uploadZip,
   ApiDocument,
 } from '../../utils/api'
 import './Parsing.css'
@@ -145,7 +146,11 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
     setErr('')
     try {
       for (const file of files) {
-        await uploadDocument(Number(customerId), docType, file)
+        if (file.name.toLowerCase().endsWith('.zip')) {
+          await uploadZip(Number(customerId), docType, file)
+        } else {
+          await uploadDocument(Number(customerId), docType, file)
+        }
       }
       onDone()
     } catch (e: unknown) {
@@ -182,7 +187,7 @@ function UploadModal({ onDone, onClose }: UploadModalProps) {
             <input
               type="file"
               className="form-file"
-              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
+              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.zip"
               multiple
               onChange={e => setFiles(Array.from(e.target.files ?? []))}
             />

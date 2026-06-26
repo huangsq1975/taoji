@@ -201,6 +201,23 @@ export function deleteDocument(id: number) {
   return api.delete<void>(`/documents/${id}`)
 }
 
+export function uploadZip(customerId: number, docType: string, file: File) {
+  const token = getToken()
+  const form = new FormData()
+  form.append('customerId', String(customerId))
+  form.append('docType', docType)
+  form.append('file', file)
+  return fetch('/api/v1/documents/upload-zip', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  }).then(async r => {
+    const json = await r.json()
+    if (!r.ok) throw new Error(json.message || '上传失败')
+    return json.data as ApiDocument[]
+  })
+}
+
 export function uploadDocument(customerId: number, docType: string, file: File) {
   const token = getToken()
   const form = new FormData()

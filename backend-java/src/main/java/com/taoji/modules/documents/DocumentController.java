@@ -33,6 +33,16 @@ public class DocumentController {
         return ApiResponse.ok(documentService.uploadDocument(currentUser, customerId, docType, file));
     }
 
+    @PostMapping("/documents/upload-zip")
+    @Operation(summary = "上传ZIP并解压", description = "解压ZIP中的所有文件，分别保存为独立文档并触发AI解析")
+    public ApiResponse<List<DocumentResponse>> uploadZip(
+            @CurrentUser JwtUserDetails currentUser,
+            @RequestParam Long customerId,
+            @RequestParam String docType,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.ok(documentService.uploadZip(currentUser, customerId, docType, file));
+    }
+
     @GetMapping("/customers/{customerId}/documents")
     @Operation(summary = "获取客户文档列表")
     public ApiResponse<List<DocumentResponse>> listDocuments(
