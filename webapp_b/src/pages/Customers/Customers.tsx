@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listCustomers, createCustomer, deleteCustomer, type ApiCustomer } from '../../utils/api'
+import { listCustomers, createCustomer, updateCustomer, deleteCustomer, type ApiCustomer } from '../../utils/api'
 import './Customers.css'
 
 // ─── Status mapping ───────────────────────────────────────────────────────────
@@ -146,6 +146,110 @@ function CreateCustomerModal({ onClose, onCreated }: CreateModalProps) {
   )
 }
 
+// ─── Edit Customer Modal ──────────────────────────────────────────────────────
+
+interface EditModalProps {
+  customer: ApiCustomer
+  onClose: () => void
+  onUpdated: (c: ApiCustomer) => void
+}
+
+function EditCustomerModal({ customer, onClose, onUpdated }: EditModalProps) {
+  const [form, setForm] = useState({
+    name: customer.name,
+    contactName: customer.contactName ?? '',
+    contactPhone: customer.contactPhone ?? '',
+    financingNeed: customer.financingNeed ?? '',
+    loanAmount: customer.loanAmount != null ? String(customer.loanAmount) : '',
+    loanPurpose: customer.loanPurpose ?? '',
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  function setField(key: string, val: string) {
+    setForm(f => ({ ...f, [key]: val }))
+    setError('')
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) { setError('客户名称不能为空'); return }
+    setLoading(true)
+    try {
+      const updated = await updateCustomer(customer.id, {
+        name: form.name.trim(),
+        contactName: form.contactName.trim() || undefined,
+        contactPhone: form.contactPhone.trim() || undefined,
+        financingNeed: form.financingNeed.trim() || undefined,
+        loanAmount: form.loanAmount ? Number(form.loanAmount) : undefined,
+        loanPurpose: form.loanPurpose.trim() || undefined,
+      })
+      onUpdated(updated)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">编辑客户信息</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            {error && <div className="modal-error">{error}</div>}
+            <div className="form-row">
+              <label>客户名称 <span className="required">*</span></label>
+              <input placeholder="企业名称或个人姓名" value={form.name}
+                onChange={e => setField('name', e.target.value)} />
+            </div>
+            <div className="form-row-2">
+              <div className="form-row">
+                <label>联系人</label>
+                <input placeholder="联系人姓名" value={form.contactName}
+                  onChange={e => setField('contactName', e.target.value)} />
+              </div>
+              <div className="form-row">
+                <label>联系电话</label>
+                <input placeholder="手机号" value={form.contactPhone}
+                  onChange={e => setField('contactPhone', e.target.value)} />
+              </div>
+            </div>
+            <div className="form-row-2">
+              <div className="form-row">
+                <label>意向金额（万元）</label>
+                <input type="number" placeholder="如 300" value={form.loanAmount} min="0"
+                  onChange={e => setField('loanAmount', e.target.value)} />
+              </div>
+              <div className="form-row">
+                <label>资金用途</label>
+                <input placeholder="如 流动资金" value={form.loanPurpose}
+                  onChange={e => setField('loanPurpose', e.target.value)} />
+              </div>
+            </div>
+            <div className="form-row">
+              <label>融资诉求</label>
+              <textarea placeholder="简要描述融资需求背景..." rows={3}
+                value={form.financingNeed}
+                onChange={e => setField('financingNeed', e.target.value)} />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>取消</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? '保存中…' : '保存'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Pagination ───────────────────────────────────────────────────────────────
 
 function Pagination({ page, totalPages, total, pageSize, onChange }: {
@@ -244,6 +348,7 @@ export default function Customers() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<ApiCustomer | null>(null)
+  const [editCustomer, setEditCustomer] = useState<ApiCustomer | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword), 400)
@@ -283,6 +388,11 @@ export default function Customers() {
     setConfirmDelete(null)
     setCustomers(prev => prev.filter(c => c.id !== id))
     setTotal(prev => prev - 1)
+  }
+
+  function handleUpdated(updated: ApiCustomer) {
+    setEditCustomer(null)
+    setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c))
   }
 
   return (
@@ -391,6 +501,11 @@ export default function Customers() {
                           AI填表
                         </button>
                         <button className="btn-sm"
+                          style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}
+                          onClick={e => { e.stopPropagation(); setEditCustomer(c) }}>
+                          编辑
+                        </button>
+                        <button className="btn-sm"
                           style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
                           onClick={e => { e.stopPropagation(); setConfirmDelete(c) }}>
                           删除
@@ -424,6 +539,13 @@ export default function Customers() {
           customer={confirmDelete}
           onClose={() => setConfirmDelete(null)}
           onDeleted={handleDeleted}
+        />
+      )}
+      {editCustomer && (
+        <EditCustomerModal
+          customer={editCustomer}
+          onClose={() => setEditCustomer(null)}
+          onUpdated={handleUpdated}
         />
       )}
     </div>
