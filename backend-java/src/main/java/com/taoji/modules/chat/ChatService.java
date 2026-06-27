@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import jakarta.annotation.PostConstruct;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,14 +35,25 @@ public class ChatService {
     @Value("${ai.api-key:}")
     private String aiApiKey;
 
+    @Value("${ai.model:gpt-4o-mini}")
+    private String aiModel;
+
+    @PostConstruct
+    void logAiConfig() {
+        boolean keyPresent = aiApiKey != null && !aiApiKey.isBlank();
+        log.info("AI chat config: url={}, model={}, keyConfigured={}", aiApiUrl, aiModel, keyPresent);
+    }
+
     @Transactional
     public Map<String, Object> sendMessage(SendMessageRequest request) {
+        String source = request.getSource() != null ? request.getSource() : "c_end";
+
         // Get or create session
         Long sessionId = request.getSessionId();
         if (sessionId == null) {
             sessionId = dsl.insertInto(DSL.table("chat_sessions"))
                     .set(DSL.field("customer_id"), request.getCustomerId())
-                    .set(DSL.field("source"), request.getSource())
+                    .set(DSL.field("source", String.class), chatSourceField(source))
                     .set(DSL.field("created_at"), LocalDateTime.now())
                     .returningResult(DSL.field("id", Long.class))
                     .fetchOneInto(Long.class);
@@ -58,7 +71,7 @@ public class ChatService {
         // Save user message
         dsl.insertInto(DSL.table("chat_messages"))
                 .set(DSL.field("session_id"), sessionId)
-                .set(DSL.field("role"), "user")
+                .set(DSL.field("role", String.class), chatRoleField("user"))
                 .set(DSL.field("content"), request.getContent())
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .execute();
@@ -78,12 +91,12 @@ public class ChatService {
         java.util.Collections.reverse(history);
 
         // Call AI API
-        String aiResponse = callAiChat(history, request.getContent(), request.getCustomerId());
+        String aiResponse = callAiChat(history, request.getContent(), source);
 
         // Save assistant response
         Long aiMessageId = dsl.insertInto(DSL.table("chat_messages"))
                 .set(DSL.field("session_id"), sessionId)
-                .set(DSL.field("role"), "assistant")
+                .set(DSL.field("role", String.class), chatRoleField("assistant"))
                 .set(DSL.field("content"), aiResponse)
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
@@ -162,9 +175,10 @@ public class ChatService {
     }
 
     public Map<String, Object> createSession(Long customerId, String source) {
+        String chatSource = source != null ? source : "c_end";
         Long sessionId = dsl.insertInto(DSL.table("chat_sessions"))
                 .set(DSL.field("customer_id"), customerId)
-                .set(DSL.field("source"), source != null ? source : "c_end")
+                .set(DSL.field("source", String.class), chatSourceField(chatSource))
                 .set(DSL.field("created_at"), LocalDateTime.now())
                 .returningResult(DSL.field("id", Long.class))
                 .fetchOneInto(Long.class);
@@ -175,29 +189,38 @@ public class ChatService {
                 .fetchOneMap();
     }
 
+    private org.jooq.Field<String> chatSourceField(String source) {
+        return DSL.field("?::chat_source", String.class, source);
+    }
+
+    private org.jooq.Field<String> chatRoleField(String role) {
+        return DSL.field("?::chat_role", String.class, role);
+    }
+
     @SuppressWarnings("unchecked")
-    private String callAiChat(List<Map<String, Object>> history, String userMessage, Long customerId) {
+    private String callAiChat(List<Map<String, Object>> history, String userMessage, String source) {
         if (aiApiKey == null || aiApiKey.isBlank()) {
             log.info("AI API key not configured, returning mock response");
-            return generateMockResponse(userMessage, customerId);
+            return generateMockResponse(userMessage);
         }
 
         try {
             List<Map<String, Object>> messages = new ArrayList<>();
 
-            // System prompt
             messages.add(Map.of(
                     "role", "system",
-                    "content", "你是韬纪元AI贷款助手，专门帮助用户了解贷款相关信息、整理申请材料、解答疑问。" +
-                            "请用专业、友好的语气回答，内容简洁清晰。" +
-                            "重要声明：本平台不直接发放贷款，所有AI生成结果仅供参考，最终以顾问审核为准。"
+                    "content", systemPromptFor(source)
             ));
 
-            // Add history
-            messages.addAll(history);
+            for (Map<String, Object> item : history) {
+                messages.add(Map.of(
+                        "role", String.valueOf(item.get("role")),
+                        "content", String.valueOf(item.get("content"))
+                ));
+            }
 
             Map<String, Object> payload = Map.of(
-                    "model", "gpt-4o-mini",
+                    "model", aiModel,
                     "messages", messages,
                     "max_tokens", 500,
                     "temperature", 0.7
@@ -225,11 +248,22 @@ public class ChatService {
 
         } catch (Exception e) {
             log.error("AI chat API call failed: {}", e.getMessage(), e);
-            return generateMockResponse(userMessage, customerId);
+            return "抱歉，AI 服务调用失败：" + e.getMessage();
         }
     }
 
-    private String generateMockResponse(String userMessage, Long customerId) {
+    private String systemPromptFor(String source) {
+        if ("advisor_pc".equals(source) || "advisor_mobile".equals(source)) {
+            return "你是韬纪元AI机构顾问助手，专门帮助贷款顾问撰写沟通话术、整理客户材料说明、辅助银行制式表格填写与复核。" +
+                    "请用专业、简洁的语气回答，输出可直接用于工作的文字。" +
+                    "重要声明：本平台不直接发放贷款，所有AI生成结果仅供参考，最终以顾问审核为准。";
+        }
+        return "你是韬纪元AI贷款助手，专门帮助用户了解贷款相关信息、整理申请材料、解答疑问。" +
+                "请用专业、友好的语气回答，内容简洁清晰。" +
+                "重要声明：本平台不直接发放贷款，所有AI生成结果仅供参考，最终以顾问审核为准。";
+    }
+
+    private String generateMockResponse(String userMessage) {
         if (userMessage.contains("贷款") || userMessage.contains("申请")) {
             return "您好！我是韬纪元AI贷款助手。关于贷款申请，我需要了解您的基本情况：\n" +
                     "1. 您是个人申请还是企业申请？\n" +
