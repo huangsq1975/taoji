@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
-import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,12 +43,12 @@ public class NotificationController {
         LocalDateTime since = LocalDateTime.now().minusDays(7);
 
         // Fetch follow_up_records for this customer within last 7 days
-        List<Record> records = dsl.select(
-                        DSL.field("f.id"),
-                        DSL.field("f.type"),
-                        DSL.field("f.content"),
-                        DSL.field("f.created_at"),
-                        DSL.field("u.name").as("advisor_name")
+        var records = dsl.select(
+                        DSL.field("f.id", Long.class),
+                        DSL.field("f.type", String.class),
+                        DSL.field("f.content", String.class),
+                        DSL.field("f.created_at", LocalDateTime.class),
+                        DSL.field("u.name", String.class).as("advisor_name")
                 )
                 .from(DSL.table("follow_up_records").as("f"))
                 .leftJoin(DSL.table("users").as("u"))
@@ -67,12 +66,12 @@ public class NotificationController {
                 .fetchSet(DSL.field("source_id", Long.class));
 
         List<Map<String, Object>> notifications = new ArrayList<>();
-        for (Record r : records) {
-            Long id = r.get(DSL.field("f.id", Long.class));
-            String type = r.get(DSL.field("f.type")).toString();
-            String content = r.get(DSL.field("f.content", String.class));
-            LocalDateTime createdAt = r.get(DSL.field("f.created_at", LocalDateTime.class));
-            String advisorName = r.get(DSL.field("advisor_name", String.class));
+        for (var r : records) {
+            Long id = r.get(0, Long.class);
+            String type = r.get(1, String.class);
+            String content = r.get(2, String.class);
+            LocalDateTime createdAt = r.get(3, LocalDateTime.class);
+            String advisorName = r.get(4, String.class);
             if (advisorName == null) advisorName = "顾问";
 
             Map<String, Object> item = new LinkedHashMap<>();
